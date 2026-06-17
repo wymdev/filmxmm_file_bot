@@ -37,10 +37,26 @@ async def ForceSub(bot: Client, update: Message, file_id: str = False, mode="che
         # Makes the bot a bit faster and also eliminates many issues realted to invite links.
         if INVITE_LINK is None:
             chat_id = REQ_CHANNEL if REQ_CHANNEL else AUTH_CHANNEL
-            invite_link = (await bot.create_chat_invite_link(
-                chat_id=int(chat_id),
-                creates_join_request=True if REQ_CHANNEL and JOIN_REQS_DB else False
-            )).invite_link
+            try:
+                chat = await bot.get_chat(int(chat_id))
+                if chat.username:
+                    invite_link = f"https://t.me/{chat.username}"
+                elif chat.invite_link:
+                    invite_link = chat.invite_link
+                else:
+                    invite_link = (await bot.create_chat_invite_link(
+                        chat_id=int(chat_id),
+                        creates_join_request=True if REQ_CHANNEL and JOIN_REQS_DB else False
+                    )).invite_link
+            except Exception as e:
+                logger.error(f"Failed to fetch invite link automatically: {e}")
+                if int(chat_id) == -1003922880580:
+                    invite_link = "https://t.me/filmxhub20"
+                else:
+                    invite_link = (await bot.create_chat_invite_link(
+                        chat_id=int(chat_id),
+                        creates_join_request=True if REQ_CHANNEL and JOIN_REQS_DB else False
+                    )).invite_link
             INVITE_LINK = invite_link
             logger.info("Created Req link")
         else:
@@ -52,7 +68,7 @@ async def ForceSub(bot: Client, update: Message, file_id: str = False, mode="che
         return fix_
 
     except Exception as err:
-        print(f"Unable to do Force Subscribe to {REQ_CHANNEL}\n\nError: {err}\n\n")
+        print(f"Unable to do Force Subscribe to {REQ_CHANNEL if REQ_CHANNEL else AUTH_CHANNEL}\n\nError: {err}\n\n")
         await update.reply(
             text="Something went Wrong.",
             parse_mode=enums.ParseMode.MARKDOWN,
