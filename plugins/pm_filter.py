@@ -1,5 +1,6 @@
 # Kanged From @TroJanZheX
 import asyncio
+import base64
 import re
 import ast
 import math
@@ -393,7 +394,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
             await query.answer("I Like Your Smartness, But Don't Be Oversmart 😒", show_alert=True)
             return
         ident, file_id = query.data.split("#")
-        if file_id == "False" or not file_id:
+        if file_id in ["False", "subscribe"] or not file_id:
             await query.answer()
             buttons = [[
                 InlineKeyboardButton('♻️ Updates Channel ♻️', url=f'https://t.me/filmxhub20'),
@@ -407,6 +408,16 @@ async def cb_handler(client: Client, query: CallbackQuery):
             )
             return
         files_ = await get_file_details(file_id)
+        if not files_:
+            try:
+                decoded = (base64.urlsafe_b64decode(file_id + "=" * (-len(file_id) % 4))).decode("ascii")
+                if "_" in decoded:
+                    ident, file_id = decoded.split("_", 1)
+                else:
+                    file_id = decoded
+                files_ = await get_file_details(file_id)
+            except Exception:
+                pass
         if not files_:
             return await query.answer('No such file exist.')
         files = files_[0]
