@@ -393,6 +393,19 @@ async def cb_handler(client: Client, query: CallbackQuery):
             await query.answer("I Like Your Smartness, But Don't Be Oversmart 😒", show_alert=True)
             return
         ident, file_id = query.data.split("#")
+        if file_id == "False" or not file_id:
+            await query.answer()
+            buttons = [[
+                InlineKeyboardButton('♻️ Updates Channel ♻️', url=f'https://t.me/filmxhub20'),
+                InlineKeyboardButton('😊 About', callback_data='about')
+            ]]
+            reply_markup = InlineKeyboardMarkup(buttons)
+            await query.message.edit_text(
+                text=script.START_TXT.format(query.from_user.mention, temp.U_NAME, temp.B_NAME),
+                reply_markup=reply_markup,
+                parse_mode=enums.ParseMode.HTML
+            )
+            return
         files_ = await get_file_details(file_id)
         if not files_:
             return await query.answer('No such file exist.')

@@ -133,9 +133,6 @@ To download the requested file, please follow these steps:
             ]
         ]
         
-        if file_id is False:
-            buttons.pop(1)
-
         if not is_cb:
             await update.reply(
                 text=text,
