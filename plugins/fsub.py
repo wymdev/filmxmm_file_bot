@@ -4,7 +4,7 @@
 
 import asyncio
 from pyrogram import Client, enums
-from pyrogram.errors import FloodWait, UserNotParticipant
+from pyrogram.errors import FloodWait, UserNotParticipant, PeerIdInvalid
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message
 
 from database.join_reqs import JoinReqs
@@ -113,7 +113,7 @@ async def ForceSub(bot: Client, update: Message, file_id: str = False, mode="che
 
         else:
             return True
-    except UserNotParticipant:
+    except (UserNotParticipant, PeerIdInvalid):
         text="""**Join Our Channel to Get Your File!**
 
 To download the requested file, please follow these steps:
