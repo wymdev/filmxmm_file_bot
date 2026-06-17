@@ -43,6 +43,22 @@ class Bot(Client):
         logging.info(f"{me.first_name} with for Pyrogram v{__version__} (Layer {layer}) started on {me.username}.")
         logging.info(LOG_STR)
 
+        # Resolve Force Subscribe channel peer ID at startup to avoid PeerIdInvalid errors
+        from info import AUTH_CHANNEL, REQ_CHANNEL
+        for channel_id in [AUTH_CHANNEL, REQ_CHANNEL]:
+            if channel_id:
+                try:
+                    await self.get_chat(int(channel_id))
+                except Exception as e:
+                    logging.warning(f"Failed to resolve channel {channel_id} by ID: {e}")
+                    # Try username resolution fallback
+                    if int(channel_id) == -1003922880580:
+                        try:
+                            await self.get_chat("@filmxhub20")
+                            logging.info("Successfully resolved and cached channel @filmxhub20 peer.")
+                        except Exception as err:
+                            logging.error(f"Failed to resolve channel @filmxhub20 username: {err}")
+
     async def stop(self, *args):
         await super().stop()
         logging.info("Bot stopped. Bye.")
