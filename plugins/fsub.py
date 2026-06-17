@@ -68,7 +68,7 @@ async def ForceSub(bot: Client, update: Message, file_id: str = False, mode="che
         return fix_
 
     except Exception as err:
-        print(f"Unable to do Force Subscribe to {REQ_CHANNEL if REQ_CHANNEL else AUTH_CHANNEL}\n\nError: {err}\n\n")
+        logger.exception(f"Unable to do Force Subscribe to {REQ_CHANNEL if REQ_CHANNEL else AUTH_CHANNEL}")
         await update.reply(
             text="Something went Wrong.",
             parse_mode=enums.ParseMode.MARKDOWN,
@@ -148,7 +148,7 @@ To download the requested file, please follow these steps:
         return fix_
 
     except Exception as err:
-        print(f"Something Went Wrong! Unable to do Force Subscribe.\nError: {err}")
+        logger.exception("Something Went Wrong! Unable to do Force Subscribe.")
         await update.reply(
             text="Something went Wrong.",
             parse_mode=enums.ParseMode.MARKDOWN,
