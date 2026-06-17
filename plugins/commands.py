@@ -131,9 +131,6 @@ async def start(client, message):
                     chat_id=message.from_user.id,
                     file_id=msg.get("file_id"),
                     caption=f_caption,
-                    
-                    reply_markup=InlineKeyboardMarkup( [ [InlineKeyboardButton("🍿 FilmX 🍿", url="https://t.me/filmxhub20")] ] ),
-                    
                     protect_content=msg.get('protect', False),
                     )
                 asyncio.create_task(auto_delete_message(sent_msg, 5 * 3600))
@@ -218,7 +215,6 @@ async def start(client, message):
             chat_id=message.from_user.id,
             file_id=files.file_id,
             caption=f_caption,
-            reply_markup=InlineKeyboardMarkup( [ [InlineKeyboardButton("🍿 FilmX 🍿", url="https://t.me/filmxhub20")] ] ),
             protect_content=True if pre == 'filep' else False,
             )
         asyncio.create_task(auto_delete_message(sent_msg, 5 * 3600))
