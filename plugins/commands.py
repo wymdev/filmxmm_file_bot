@@ -8,6 +8,7 @@ from pyrogram.errors import ChatAdminRequired, FloodWait
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from database.ia_filterdb import Media, get_file_details
 from database.users_chats_db import db
+from database.auto_delete_db import schedule_auto_delete
 from info import CHANNELS, ADMINS, AUTH_CHANNEL, LOG_CHANNEL, PICS, BATCH_FILE_CAPTION, CUSTOM_FILE_CAPTION, PROTECT_CONTENT
 from utils import get_settings, get_size, save_group_settings, temp
 from database.connections_mdb import active_connection
@@ -18,15 +19,6 @@ import base64
 logger = logging.getLogger(__name__)
 
 BATCH_FILES = {}
-
-auto_delete_tasks = set()
-
-async def auto_delete_message(msg, delay):
-    await asyncio.sleep(delay)
-    try:
-        await msg.delete()
-    except Exception as e:
-        logger.warning(f"Failed to auto delete: {e}")
 
 
 @Client.on_message(filters.command("start") & filters.incoming)
@@ -128,9 +120,7 @@ async def start(client, message):
                     caption=f_caption,
                     protect_content=msg.get('protect', False),
                     )
-                task = asyncio.create_task(auto_delete_message(sent_msg, 5 * 3600))
-                auto_delete_tasks.add(task)
-                task.add_done_callback(auto_delete_tasks.discard)
+                await schedule_auto_delete(message.from_user.id, sent_msg.id)
             except FloodWait as e:
                 await asyncio.sleep(e.x)
                 logger.warning(f"Floodwait of {e.x} sec.")
@@ -140,9 +130,7 @@ async def start(client, message):
                     caption=f_caption,
                     protect_content=msg.get('protect', False),
                     )
-                task = asyncio.create_task(auto_delete_message(sent_msg, 5 * 3600))
-                auto_delete_tasks.add(task)
-                task.add_done_callback(auto_delete_tasks.discard)
+                await schedule_auto_delete(message.from_user.id, sent_msg.id)
             except Exception as e:
                 logger.warning(e, exc_info=True)
                 continue
@@ -226,9 +214,7 @@ async def start(client, message):
             caption=f_caption,
             protect_content=True if pre == 'filep' else False,
             )
-        task = asyncio.create_task(auto_delete_message(sent_msg, 5 * 3600))
-        auto_delete_tasks.add(task)
-        task.add_done_callback(auto_delete_tasks.discard)
+        await schedule_auto_delete(message.from_user.id, sent_msg.id)
     except Exception as e:
         logger.error(f"Error sending cached media: {e}")
         return await message.reply('No such file exist.')

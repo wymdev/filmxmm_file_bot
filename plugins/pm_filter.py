@@ -10,6 +10,7 @@ import pyrogram
 from database.connections_mdb import active_connection, all_connections, delete_connection, if_active, make_active, \
     make_inactive
 from info import ADMINS, AUTH_CHANNEL, CUSTOM_FILE_CAPTION, REQ_CHANNEL
+from database.auto_delete_db import schedule_auto_delete
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from pyrogram import Client, filters, enums
 from pyrogram.errors import FloodWait, UserIsBlocked, MessageNotModified, PeerIdInvalid
@@ -26,14 +27,7 @@ import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.ERROR)
 
-auto_delete_tasks = set()
 
-async def auto_delete_message(msg, delay):
-    await asyncio.sleep(delay)
-    try:
-        await msg.delete()
-    except Exception as e:
-        logger.warning(f"Failed to auto delete: {e}")
 
 
 BUTTONS = {}
@@ -383,9 +377,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
                     caption=f_caption,
                     protect_content=True if ident == "filep" else False 
                 )
-                task = asyncio.create_task(auto_delete_message(sent_msg, 5 * 3600))
-                auto_delete_tasks.add(task)
-                task.add_done_callback(auto_delete_tasks.discard)
+                await schedule_auto_delete(query.from_user.id, sent_msg.id)
                 await query.answer('Check PM, I have sent files in pm', show_alert=True)
         except UserIsBlocked:
             await query.answer('Unblock the bot mahn !', show_alert=True)
@@ -449,9 +441,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
             caption=f_caption,
             protect_content=True if ident == 'checksubp' else False
         )
-        task = asyncio.create_task(auto_delete_message(sent_msg, 5 * 3600))
-        auto_delete_tasks.add(task)
-        task.add_done_callback(auto_delete_tasks.discard)
+        await schedule_auto_delete(query.from_user.id, sent_msg.id)
     elif query.data == "pages":
         await query.answer()
     elif query.data == "start":

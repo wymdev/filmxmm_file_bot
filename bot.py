@@ -1,5 +1,6 @@
 import logging
 import logging.config
+import asyncio
 
 # Get logging configurations
 logging.config.fileConfig('logging.conf')
@@ -11,6 +12,7 @@ from pyrogram import Client, __version__
 from pyrogram.raw.all import layer
 from database.ia_filterdb import Media
 from database.users_chats_db import db
+from database.auto_delete_db import ensure_auto_delete_indexes, get_expired_messages, remove_entry
 from info import SESSION, API_ID, API_HASH, BOT_TOKEN, LOG_STR
 from utils import temp
 from typing import Union, Optional, AsyncGenerator
@@ -43,6 +45,10 @@ class Bot(Client):
         logging.info(f"{me.first_name} with for Pyrogram v{__version__} (Layer {layer}) started on {me.username}.")
         logging.info(LOG_STR)
 
+        # Ensure auto-delete indexes and start the background cleanup loop
+        await ensure_auto_delete_indexes()
+        self._auto_delete_task = asyncio.create_task(self._auto_delete_loop())
+
         # Resolve Force Subscribe channel peer ID at startup to avoid PeerIdInvalid errors
         from info import AUTH_CHANNEL, REQ_CHANNEL
         for channel_id in [AUTH_CHANNEL, REQ_CHANNEL]:
@@ -60,8 +66,31 @@ class Bot(Client):
                             logging.error(f"Failed to resolve channel @filmxhub20 username: {err}")
 
     async def stop(self, *args):
+        if hasattr(self, '_auto_delete_task'):
+            self._auto_delete_task.cancel()
         await super().stop()
         logging.info("Bot stopped. Bye.")
+
+    async def _auto_delete_loop(self):
+        """Background loop that checks MongoDB every 5 minutes for expired messages and deletes them."""
+        await asyncio.sleep(10)  # Wait a bit after startup
+        while True:
+            try:
+                expired = await get_expired_messages()
+                for entry in expired:
+                    try:
+                        await self.delete_messages(
+                            chat_id=entry['chat_id'],
+                            message_ids=entry['message_id']
+                        )
+                        logging.info(f"Auto-deleted msg {entry['message_id']} in chat {entry['chat_id']}")
+                    except Exception as e:
+                        logging.warning(f"Failed to auto-delete msg {entry['message_id']} in chat {entry['chat_id']}: {e}")
+                    # Remove from queue regardless (message may already be deleted manually)
+                    await remove_entry(entry['_id'])
+            except Exception as e:
+                logging.error(f"Error in auto-delete loop: {e}")
+            await asyncio.sleep(300)  # Check every 5 minutes
     
     async def iter_messages(
         self,
