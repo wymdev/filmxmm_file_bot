@@ -38,7 +38,7 @@ async def save_file(media):
 
     file_id = media.file_id
     file_unique_id = getattr(media, "file_unique_id", media.file_id)
-    file_name = re.sub(r"(_|\-|\.|\+)", " ", str(media.file_name))
+    file_name = re.sub(r"(_|\-|\.|\+)", " ", str(media.file_name)) if media.file_name else ""
     try:
         file = Media(
             file_id=file_id,
