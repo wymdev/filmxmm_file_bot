@@ -26,12 +26,15 @@ import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.ERROR)
 
+auto_delete_tasks = set()
+
 async def auto_delete_message(msg, delay):
     await asyncio.sleep(delay)
     try:
         await msg.delete()
     except Exception as e:
         logger.warning(f"Failed to auto delete: {e}")
+
 
 BUTTONS = {}
 SPELL_CHECK = {}
@@ -173,12 +176,11 @@ async def cb_handler(client: Client, query: CallbackQuery):
                     chat = await client.get_chat(grpid)
                     title = chat.title
                 except:
-                    await query.message.edit_text("Make sure I'm present in your group!!", quote=True)
+                    await query.message.edit_text("Make sure I'm present in your group!!")
                     return await query.answer('Piracy Is Crime')
             else:
                 await query.message.edit_text(
-                    "I'm not connected to any groups!\nCheck /connections or connect to any groups",
-                    quote=True
+                    "I'm not connected to any groups!\nCheck /connections or connect to any groups"
                 )
                 return await query.answer('Piracy Is Crime')
 
@@ -381,7 +383,9 @@ async def cb_handler(client: Client, query: CallbackQuery):
                     caption=f_caption,
                     protect_content=True if ident == "filep" else False 
                 )
-                asyncio.create_task(auto_delete_message(sent_msg, 5 * 3600))
+                task = asyncio.create_task(auto_delete_message(sent_msg, 5 * 3600))
+                auto_delete_tasks.add(task)
+                task.add_done_callback(auto_delete_tasks.discard)
                 await query.answer('Check PM, I have sent files in pm', show_alert=True)
         except UserIsBlocked:
             await query.answer('Unblock the bot mahn !', show_alert=True)
@@ -445,7 +449,9 @@ async def cb_handler(client: Client, query: CallbackQuery):
             caption=f_caption,
             protect_content=True if ident == 'checksubp' else False
         )
-        asyncio.create_task(auto_delete_message(sent_msg, 5 * 3600))
+        task = asyncio.create_task(auto_delete_message(sent_msg, 5 * 3600))
+        auto_delete_tasks.add(task)
+        task.add_done_callback(auto_delete_tasks.discard)
     elif query.data == "pages":
         await query.answer()
     elif query.data == "start":

@@ -19,12 +19,15 @@ logger = logging.getLogger(__name__)
 
 BATCH_FILES = {}
 
+auto_delete_tasks = set()
+
 async def auto_delete_message(msg, delay):
     await asyncio.sleep(delay)
     try:
         await msg.delete()
     except Exception as e:
         logger.warning(f"Failed to auto delete: {e}")
+
 
 @Client.on_message(filters.command("start") & filters.incoming)
 async def start(client, message):
@@ -125,7 +128,9 @@ async def start(client, message):
                     caption=f_caption,
                     protect_content=msg.get('protect', False),
                     )
-                asyncio.create_task(auto_delete_message(sent_msg, 5 * 3600))
+                task = asyncio.create_task(auto_delete_message(sent_msg, 5 * 3600))
+                auto_delete_tasks.add(task)
+                task.add_done_callback(auto_delete_tasks.discard)
             except FloodWait as e:
                 await asyncio.sleep(e.x)
                 logger.warning(f"Floodwait of {e.x} sec.")
@@ -135,7 +140,9 @@ async def start(client, message):
                     caption=f_caption,
                     protect_content=msg.get('protect', False),
                     )
-                asyncio.create_task(auto_delete_message(sent_msg, 5 * 3600))
+                task = asyncio.create_task(auto_delete_message(sent_msg, 5 * 3600))
+                auto_delete_tasks.add(task)
+                task.add_done_callback(auto_delete_tasks.discard)
             except Exception as e:
                 logger.warning(e, exc_info=True)
                 continue
@@ -219,7 +226,9 @@ async def start(client, message):
             caption=f_caption,
             protect_content=True if pre == 'filep' else False,
             )
-        asyncio.create_task(auto_delete_message(sent_msg, 5 * 3600))
+        task = asyncio.create_task(auto_delete_message(sent_msg, 5 * 3600))
+        auto_delete_tasks.add(task)
+        task.add_done_callback(auto_delete_tasks.discard)
     except Exception as e:
         logger.error(f"Error sending cached media: {e}")
         return await message.reply('No such file exist.')
