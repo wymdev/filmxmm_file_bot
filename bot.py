@@ -84,6 +84,21 @@ class Bot(Client):
                             message_ids=entry['message_id']
                         )
                         logging.info(f"Auto-deleted msg {entry['message_id']} in chat {entry['chat_id']}")
+                        # Send DMCA copyright notice after deletion
+                        try:
+                            await self.send_message(
+                                chat_id=entry['chat_id'],
+                                text=(
+                                    "<b>⚠️ Copyright Notice</b>\n\n"
+                                    "The file you requested has been <b>automatically deleted</b> "
+                                    "due to <b>DMCA / Copyright</b> compliance.\n\n"
+                                    "📌 <i>If you need the file again, please request it once more from the group.</i>\n\n"
+                                    "🔒 <b>Note:</b> All files are auto-deleted after 5 hours to comply with copyright regulations."
+                                ),
+                                parse_mode='html'
+                            )
+                        except Exception as notify_err:
+                            logging.warning(f"Failed to send DMCA notice to chat {entry['chat_id']}: {notify_err}")
                     except Exception as e:
                         logging.warning(f"Failed to auto-delete msg {entry['message_id']} in chat {entry['chat_id']}: {e}")
                     # Remove from queue regardless (message may already be deleted manually)
