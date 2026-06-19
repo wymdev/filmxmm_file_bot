@@ -8,7 +8,7 @@ logging.getLogger().setLevel(logging.INFO)
 logging.getLogger("pyrogram").setLevel(logging.ERROR)
 logging.getLogger("imdbpy").setLevel(logging.ERROR)
 
-from pyrogram import Client, __version__
+from pyrogram import Client, __version__, enums
 from pyrogram.raw.all import layer
 from database.ia_filterdb import Media
 from database.users_chats_db import db
@@ -95,7 +95,7 @@ class Bot(Client):
                                     "📌 <i>If you need the file again, please request it once more from the channel.</i>\n\n"
                                     "🔒 <b>Note:</b> All files are auto-deleted after 5 hours to comply with copyright regulations."
                                 ),
-                                parse_mode='html'
+                                parse_mode=enums.ParseMode.HTML
                             )
                         except Exception as notify_err:
                             logging.warning(f"Failed to send DMCA notice to chat {entry['chat_id']}: {notify_err}")
