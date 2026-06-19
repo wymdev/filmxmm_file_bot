@@ -92,7 +92,7 @@ class Bot(Client):
                                     "<b>⚠️ Copyright Notice</b>\n\n"
                                     "The file you requested has been <b>automatically deleted</b> "
                                     "due to <b>DMCA / Copyright</b> compliance.\n\n"
-                                    "📌 <i>If you need the file again, please request it once more from the group.</i>\n\n"
+                                    "📌 <i>If you need the file again, please request it once more from the channel.</i>\n\n"
                                     "🔒 <b>Note:</b> All files are auto-deleted after 5 hours to comply with copyright regulations."
                                 ),
                                 parse_mode='html'
