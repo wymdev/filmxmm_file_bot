@@ -13,6 +13,7 @@ os.environ.setdefault('ADMINS', '123456')
 os.environ.setdefault('LOG_CHANNEL', '-100123456')
 
 import bot
+from plugins.commands import handle_database_errors
 
 
 class DatabaseMaintenanceTests(unittest.IsolatedAsyncioTestCase):
@@ -34,3 +35,18 @@ class DatabaseMaintenanceTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(user_indexes.await_count, 2)
         media_indexes.assert_awaited_once()
         auto_delete_indexes.assert_awaited_once()
+
+    async def test_start_handler_reports_database_outage(self):
+        async def failing_handler(client, message):
+            raise NotPrimaryError('temporary election')
+
+        reply = AsyncMock()
+        message = unittest.mock.Mock(reply=reply)
+
+        result = await handle_database_errors(failing_handler)(None, message)
+
+        self.assertIs(result, reply.return_value)
+        reply.assert_awaited_once_with(
+            "The database is temporarily unavailable. "
+            "Please try again in a few minutes."
+        )

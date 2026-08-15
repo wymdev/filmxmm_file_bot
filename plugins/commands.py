@@ -3,6 +3,7 @@ import io
 import logging
 import secrets
 import asyncio
+from functools import wraps
 from Script import script
 from pyrogram import Client, filters, enums
 from pyrogram.errors import FloodWait
@@ -10,6 +11,7 @@ from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from database.ia_filterdb import Media, get_file_details
 from database.users_chats_db import db
 from database.auto_delete_db import schedule_auto_delete
+from database.mongo import RETRYABLE_MONGO_ERRORS
 from info import CHANNELS, ADMINS, LOG_CHANNEL, PICS, BATCH_FILE_CAPTION, CUSTOM_FILE_CAPTION, PROTECT_CONTENT
 from utils import get_settings, get_size, save_group_settings, temp
 from database.connections_mdb import active_connection
@@ -20,6 +22,20 @@ import base64
 logger = logging.getLogger(__name__)
 
 BATCH_FILES = {}
+
+
+def handle_database_errors(handler):
+    @wraps(handler)
+    async def wrapped(client, message):
+        try:
+            return await handler(client, message)
+        except RETRYABLE_MONGO_ERRORS as error:
+            logger.warning("MongoDB unavailable during /start: %s", error)
+            return await message.reply(
+                "The database is temporarily unavailable. Please try again in a few minutes."
+            )
+
+    return wrapped
 
 
 def _load_downloaded_batch(path):
@@ -34,6 +50,7 @@ def _load_downloaded_batch(path):
 
 
 @Client.on_message(filters.command("start") & filters.incoming)
+@handle_database_errors
 async def start(client, message):
     if message.chat.type in [enums.ChatType.GROUP, enums.ChatType.SUPERGROUP]:
         buttons = [

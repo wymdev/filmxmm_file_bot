@@ -193,6 +193,8 @@ class Bot(Client):
                                 entry['chat_id'],
                             )
                     await remove_entry(entry['_id'])
+            except RETRYABLE_MONGO_ERRORS as error:
+                logging.warning("Auto-delete is waiting for MongoDB: %s", error)
             except Exception:
                 logging.exception("Error in auto-delete loop")
             await asyncio.sleep(300)  # Check every 5 minutes
