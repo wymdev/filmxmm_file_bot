@@ -46,19 +46,17 @@ class Bot(Client):
         ban_cache_loaded = True
         try:
             b_users, b_chats = await db.get_banned()
-        except RETRYABLE_MONGO_ERRORS:
+        except RETRYABLE_MONGO_ERRORS as error:
             ban_cache_loaded = False
-            logging.exception(
+            logging.warning(
                 "Could not load banned users/chats from MongoDB at startup; "
-                "continuing with empty ban caches."
+                "continuing with empty ban caches: %s",
+                error,
             )
             b_users, b_chats = [], []
         temp.BANNED_USERS = b_users
         temp.BANNED_CHATS = b_chats
         await super().start()
-        await db.ensure_indexes()
-        await retry_mongo_operation("media index initialization", Media.ensure_indexes)
-        await ensure_auto_delete_indexes()
         me = await self.get_me()
         temp.ME = me.id
         temp.U_NAME = me.username
@@ -76,6 +74,10 @@ class Bot(Client):
             self._ban_refresh_loop(initial_delay=30 if not ban_cache_loaded else 300),
             name='ban-refresh-loop',
         )
+        self._database_maintenance_task = asyncio.create_task(
+            self._database_maintenance_loop(),
+            name='database-maintenance-loop',
+        )
 
         # Resolve Force Subscribe channel peer ID at startup to avoid PeerIdInvalid errors
         from info import AUTH_CHANNEL, REQ_CHANNEL
@@ -90,6 +92,7 @@ class Bot(Client):
         tasks = [
             getattr(self, '_auto_delete_task', None),
             getattr(self, '_ban_refresh_task', None),
+            getattr(self, '_database_maintenance_task', None),
         ]
         for task in filter(None, tasks):
             task.cancel()
@@ -107,11 +110,39 @@ class Bot(Client):
                 b_users, b_chats = await db.get_banned()
                 temp.BANNED_USERS = b_users
                 temp.BANNED_CHATS = b_chats
-            except RETRYABLE_MONGO_ERRORS:
-                logging.exception("Could not refresh banned users/chats from MongoDB")
+            except RETRYABLE_MONGO_ERRORS as error:
+                logging.warning(
+                    "Could not refresh banned users/chats from MongoDB: %s",
+                    error,
+                )
             except Exception:
                 logging.exception("Unexpected error while refreshing banned users/chats")
             await asyncio.sleep(300)
+
+    async def _database_maintenance_loop(self):
+        """Create database indexes when MongoDB has a writable primary."""
+        while True:
+            try:
+                await db.ensure_indexes()
+                await retry_mongo_operation(
+                    "media index initialization",
+                    Media.ensure_indexes,
+                )
+                await ensure_auto_delete_indexes()
+            except RETRYABLE_MONGO_ERRORS as error:
+                logging.warning(
+                    "MongoDB indexes are not ready; retrying in 5 minutes: %s",
+                    error,
+                )
+                await asyncio.sleep(300)
+            except Exception:
+                logging.exception(
+                    "Unexpected database index error; retrying in 5 minutes"
+                )
+                await asyncio.sleep(300)
+            else:
+                logging.info("MongoDB indexes are ready")
+                return
 
     async def _auto_delete_loop(self):
         """Background loop that checks MongoDB every 5 minutes for expired messages and deletes them."""
