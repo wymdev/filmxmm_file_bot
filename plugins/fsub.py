@@ -7,20 +7,17 @@ from pyrogram import Client, enums
 from pyrogram.errors import FloodWait, UserNotParticipant, PeerIdInvalid
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message
 
-from database.join_reqs import JoinReqs
+from database.join_reqs import join_reqs
 from info import REQ_CHANNEL, AUTH_CHANNEL, JOIN_REQS_DB, ADMINS
 
 from logging import getLogger
 
 logger = getLogger(__name__)
 INVITE_LINK = None
-db = JoinReqs
-
 async def ForceSub(bot: Client, update: Message, file_id: str = False, mode="checksub"):
 
     global INVITE_LINK
-    auth = ADMINS.copy() + [1125210189]
-    if update.from_user.id in auth:
+    if update.from_user.id in ADMINS:
         return True
 
     if not AUTH_CHANNEL and not REQ_CHANNEL:
@@ -50,24 +47,21 @@ async def ForceSub(bot: Client, update: Message, file_id: str = False, mode="che
                     )).invite_link
             except Exception as e:
                 logger.error(f"Failed to fetch invite link automatically: {e}")
-                if int(chat_id) == -1003922880580:
-                    invite_link = "https://t.me/filmxhub20"
-                else:
-                    invite_link = (await bot.create_chat_invite_link(
-                        chat_id=int(chat_id),
-                        creates_join_request=True if REQ_CHANNEL and JOIN_REQS_DB else False
-                    )).invite_link
+                invite_link = (await bot.create_chat_invite_link(
+                    chat_id=int(chat_id),
+                    creates_join_request=True if REQ_CHANNEL and JOIN_REQS_DB else False
+                )).invite_link
             INVITE_LINK = invite_link
             logger.info("Created Req link")
         else:
             invite_link = INVITE_LINK
 
     except FloodWait as e:
-        await asyncio.sleep(e.x)
-        fix_ = await ForceSub(bot, update, file_id)
+        await asyncio.sleep(e.value)
+        fix_ = await ForceSub(bot, update, file_id, mode=mode)
         return fix_
 
-    except Exception as err:
+    except Exception:
         logger.exception(f"Unable to do Force Subscribe to {REQ_CHANNEL if REQ_CHANNEL else AUTH_CHANNEL}")
         await update.reply(
             text="Something went Wrong.",
@@ -77,10 +71,10 @@ async def ForceSub(bot: Client, update: Message, file_id: str = False, mode="che
         return False
 
     # Mian Logic
-    if REQ_CHANNEL and db().isActive():
+    if REQ_CHANNEL and join_reqs.is_active():
         try:
             # Check if User is Requested to Join Channel
-            user = await db().get_user(update.from_user.id)
+            user = await join_reqs.get_user(update.from_user.id)
             if user and user["user_id"] == update.from_user.id:
                 return True
         except Exception as e:
@@ -143,11 +137,11 @@ To download the requested file, please follow these steps:
         return False
 
     except FloodWait as e:
-        await asyncio.sleep(e.x)
-        fix_ = await ForceSub(bot, update, file_id)
+        await asyncio.sleep(e.value)
+        fix_ = await ForceSub(bot, update, file_id, mode=mode)
         return fix_
 
-    except Exception as err:
+    except Exception:
         logger.exception("Something Went Wrong! Unable to do Force Subscribe.")
         await update.reply(
             text="Something went Wrong.",
@@ -160,4 +154,3 @@ To download the requested file, please follow these steps:
 def set_global_invite(url: str):
     global INVITE_LINK
     INVITE_LINK = url
-

@@ -1,0 +1,14 @@
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+.venv
+venv
+__pycache__
+*.py[cod]
+*.log
+*.session
+*.session-journal
+.pytest_cache
+.ruff_cache

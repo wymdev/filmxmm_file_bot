@@ -1,54 +1,95 @@
 import re
 from os import environ
+
 try:
     from dotenv import load_dotenv
     load_dotenv()
 except ImportError:
     pass
 
-id_pattern = re.compile(r'^.\d+$')
+
+REQUIRED_ENV_VARS = (
+    'API_ID',
+    'API_HASH',
+    'BOT_TOKEN',
+    'DATABASE_URI',
+    'ADMINS',
+    'LOG_CHANNEL',
+)
+
+missing_env_vars = [name for name in REQUIRED_ENV_VARS if not environ.get(name, '').strip()]
+if missing_env_vars:
+    raise RuntimeError(
+        'Missing required environment variables: ' + ', '.join(missing_env_vars)
+    )
+
+
+id_pattern = re.compile(r'^-?\d+$')
+
+
 def is_enabled(value, default):
-    if value.lower() in ["true", "yes", "1", "enable", "y"]:
+    normalized = str(value).strip().lower()
+    if normalized in ["true", "yes", "1", "enable", "y"]:
         return True
-    elif value.lower() in ["false", "no", "0", "disable", "n"]:
+    elif normalized in ["false", "no", "0", "disable", "n"]:
         return False
-    else:
-        return default
+    return default
+
+
+def get_int(name, default=None):
+    value = environ.get(name, '')
+    if not value.strip():
+        if default is not None:
+            return default
+        raise RuntimeError(f'{name} must be set to an integer')
+    try:
+        return int(value)
+    except ValueError as error:
+        raise RuntimeError(f'{name} must be set to an integer') from error
+
+
+def parse_peer_list(value):
+    return [int(item) if id_pattern.fullmatch(item) else item for item in value.split()]
+
+
+def parse_id_list(name, default=''):
+    values = environ.get(name, default).split()
+    try:
+        return [int(value) for value in values]
+    except ValueError as error:
+        raise RuntimeError(f'{name} must contain only integer IDs') from error
 
 # Bot information
 SESSION = environ.get('SESSION', 'Media_search')
-API_ID = int(environ.get('API_ID', '20389440'))
-API_HASH = environ.get('API_HASH', 'a1a06a18eb9153e9dbd447cfd5da2457') 
-BOT_TOKEN = environ.get('BOT_TOKEN', "6564513574:AAF1dwXAmMGbLFEIyb_eHGow9Q_561bWf2U") 
+API_ID = get_int('API_ID')
+API_HASH = environ['API_HASH'].strip()
+BOT_TOKEN = environ['BOT_TOKEN'].strip()
 
 # Bot settings
-CACHE_TIME = int(environ.get('CACHE_TIME', 300))
-USE_CAPTION_FILTER = bool(environ.get('USE_CAPTION_FILTER', False))
+CACHE_TIME = get_int('CACHE_TIME', 300)
+USE_CAPTION_FILTER = is_enabled(environ.get('USE_CAPTION_FILTER', 'False'), False)
 PICS = (environ.get('PICS', 'https://te.legra.ph/file/119729ea3cdce4fefb6a1.jpg')).split()
 
 # Admins, Channels & Users
-ADMINS = [int(admin) if id_pattern.search(admin) else admin for admin in environ.get('ADMINS', '6168162777').split()]
-CHANNELS = [int(ch) if id_pattern.search(ch) else ch for ch in environ.get('CHANNELS', '-1001722984461').split()]
-auth_users = [int(user) if id_pattern.search(user) else user for user in environ.get('AUTH_USERS', '').split()]
+ADMINS = parse_peer_list(environ['ADMINS'])
+CHANNELS = parse_peer_list(environ.get('CHANNELS', ''))
+auth_users = parse_peer_list(environ.get('AUTH_USERS', ''))
 AUTH_USERS = (auth_users + ADMINS) if auth_users else []
-auth_grp = environ.get('AUTH_GROUP')
-AUTH_GROUPS = [int(ch) for ch in auth_grp.split()] if auth_grp else None
+AUTH_GROUPS = parse_id_list('AUTH_GROUP') or None
 
 # MongoDB information
-DATABASE_URI = environ.get('DATABASE_URI', "mongodb+srv://sushankm16:4i1WAfPYKWyqPIDD@cluster0.sngp9pz.mongodb.net/?retryWrites=true&w=majority")
-DATABASE_NAME = environ.get('DATABASE_NAME', "Cluster0")
+DATABASE_URI = environ['DATABASE_URI'].strip()
+DATABASE_NAME = environ.get('DATABASE_NAME', 'FilmXBot')
 COLLECTION_NAME = environ.get('COLLECTION_NAME', 'Telegram_files')
 
 # FSUB
-auth_channel = environ.get('AUTH_CHANNEL', '')
-AUTH_CHANNEL = int(auth_channel) if auth_channel and id_pattern.search(auth_channel) else None
+AUTH_CHANNEL = get_int('AUTH_CHANNEL', 0) or None
 # Set to False inside the bracket if you don't want to use Request Channel else set it to Channel ID
-REQ_CHANNEL = environ.get("REQ_CHANNEL", '-1001935365147')
-REQ_CHANNEL = int(REQ_CHANNEL) if REQ_CHANNEL and id_pattern.search(REQ_CHANNEL) else False
-JOIN_REQS_DB = environ.get("JOIN_REQS_DB", DATABASE_URI)
+REQ_CHANNEL = get_int('REQ_CHANNEL', 0) or False
+JOIN_REQS_DB = environ.get("JOIN_REQS_DB", '').strip() or DATABASE_URI
 
 # Others
-LOG_CHANNEL = int(environ.get('LOG_CHANNEL', '-1001623633000'))
+LOG_CHANNEL = get_int('LOG_CHANNEL')
 SUPPORT_CHAT = environ.get('SUPPORT_CHAT', 'VJ_Bot_Disscussion')
 P_TTI_SHOW_OFF = is_enabled((environ.get('P_TTI_SHOW_OFF', "True")), False)
 IMDB = is_enabled((environ.get('IMDB', "False")), True)
@@ -58,9 +99,9 @@ BATCH_FILE_CAPTION = environ.get("BATCH_FILE_CAPTION", CUSTOM_FILE_CAPTION)
 IMDB_TEMPLATE = environ.get("IMDB_TEMPLATE", "<b>Query: {query}</b> \n‌‌‌‌IMDb Data:\n\n🏷 Title: <a href={url}>{title}</a>\n🎭 Genres: {genres}\n📆 Year: <a href={url}/releaseinfo>{year}</a>\n🌟 Rating: <a href={url}/ratings>{rating}</a> / 10")
 LONG_IMDB_DESCRIPTION = is_enabled(environ.get("LONG_IMDB_DESCRIPTION", "False"), False)
 SPELL_CHECK_REPLY = is_enabled(environ.get("SPELL_CHECK_REPLY", "False"), True)
-MAX_LIST_ELM = environ.get("MAX_LIST_ELM", None)
-INDEX_REQ_CHANNEL = int(environ.get('INDEX_REQ_CHANNEL', LOG_CHANNEL))
-FILE_STORE_CHANNEL = [int(ch) for ch in (environ.get('FILE_STORE_CHANNEL', '-1001722984461')).split()]
+MAX_LIST_ELM = get_int('MAX_LIST_ELM', 0) or None
+INDEX_REQ_CHANNEL = get_int('INDEX_REQ_CHANNEL', LOG_CHANNEL)
+FILE_STORE_CHANNEL = parse_id_list('FILE_STORE_CHANNEL')
 MELCOW_NEW_USERS = is_enabled((environ.get('MELCOW_NEW_USERS', "False")), True)
 PROTECT_CONTENT = is_enabled((environ.get('PROTECT_CONTENT', "False")), False)
 PUBLIC_FILE_STORE = is_enabled((environ.get('PUBLIC_FILE_STORE', "True")), True)

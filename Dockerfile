@@ -1,14 +1,18 @@
 FROM python:3.10-slim
 
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
 WORKDIR /app
 
-# Install git (if needed by any python packages or bot logic)
-RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
-
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt \
+    && addgroup --system bot \
+    && adduser --system --ingroup bot bot
 
-COPY . .
+COPY --chown=bot:bot . .
 
-# Run the bot
-CMD ["python", "bot.py"]
+USER bot
+
+CMD ["python3", "bot.py"]

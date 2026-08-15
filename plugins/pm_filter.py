@@ -6,18 +6,18 @@ import ast
 import math
 from pyrogram.errors.exceptions.bad_request_400 import MediaEmpty, PhotoInvalidDimensions, WebpageMediaEmpty
 from Script import script
-import pyrogram
 from database.connections_mdb import active_connection, all_connections, delete_connection, if_active, make_active, \
     make_inactive
 from info import ADMINS, AUTH_CHANNEL, CUSTOM_FILE_CAPTION, REQ_CHANNEL
 from database.auto_delete_db import schedule_auto_delete
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from pyrogram import Client, filters, enums
-from pyrogram.errors import FloodWait, UserIsBlocked, MessageNotModified, PeerIdInvalid
+from pyrogram.errors import UserIsBlocked, MessageNotModified, PeerIdInvalid
 from utils import get_size, is_subscribed, get_poster, search_gagala, temp, get_settings, save_group_settings
 from database.users_chats_db import db
 from database.ia_filterdb import Media, get_file_details, get_search_results
 from database.filters_mdb import (
+    deserialize_buttons,
     del_all,
     find_filter,
     get_filters,
@@ -186,7 +186,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
             return await query.answer('Piracy Is Crime')
 
         st = await client.get_chat_member(grp_id, userid)
-        if (st.status == enums.ChatMemberStatus.OWNER) or (str(userid) in ADMINS):
+        if (st.status == enums.ChatMemberStatus.OWNER) or (userid in ADMINS):
             await del_all(query.message, grp_id, title)
         else:
             await query.answer("You need to be Group Owner or an Auth User to do that!", show_alert=True)
@@ -201,12 +201,12 @@ async def cb_handler(client: Client, query: CallbackQuery):
         elif chat_type in [enums.ChatType.GROUP, enums.ChatType.SUPERGROUP]:
             grp_id = query.message.chat.id
             st = await client.get_chat_member(grp_id, userid)
-            if (st.status == enums.ChatMemberStatus.OWNER) or (str(userid) in ADMINS):
+            if (st.status == enums.ChatMemberStatus.OWNER) or (userid in ADMINS):
                 await query.message.delete()
                 try:
                     await query.message.reply_to_message.delete()
-                except:
-                    pass
+                except Exception:
+                    logger.debug("Could not remove delete-filter prompt", exc_info=True)
             else:
                 await query.answer("That's not for you!!", show_alert=True)
     elif "groupcb" in query.data:
@@ -278,7 +278,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
             )
         else:
             await query.message.edit_text(
-                f"Some error occurred!!",
+                "Some error occurred!!",
                 parse_mode=enums.ParseMode.MARKDOWN
             )
         return await query.answer('Piracy Is Crime')
@@ -296,7 +296,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
             )
         else:
             await query.message.edit_text(
-                f"Some error occurred!!",
+                "Some error occurred!!",
                 parse_mode=enums.ParseMode.MARKDOWN
             )
         return await query.answer('Piracy Is Crime')
@@ -325,8 +325,8 @@ async def cb_handler(client: Client, query: CallbackQuery):
                         )
                     ]
                 )
-            except:
-                pass
+            except Exception:
+                logger.debug("Could not load connected group %s", groupid, exc_info=True)
         if buttons:
             await query.message.edit_text(
                 "Your connected group details ;\n\n",
@@ -383,7 +383,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
             await query.answer('Unblock the bot mahn !', show_alert=True)
         except PeerIdInvalid:
             await query.answer(url=f"https://t.me/{temp.U_NAME}?start={ident}_{file_id}")
-        except Exception as e:
+        except Exception:
             await query.answer(url=f"https://t.me/{temp.U_NAME}?start={ident}_{file_id}")
     elif query.data.startswith("checksub"):
         if (AUTH_CHANNEL or REQ_CHANNEL) and not await is_subscribed(client, query):
@@ -393,7 +393,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
         if file_id in ["False", "subscribe"] or not file_id:
             await query.answer()
             buttons = [[
-                InlineKeyboardButton('♻️ Updates Channel ♻️', url=f'https://t.me/filmxhub20'),
+                InlineKeyboardButton('♻️ Updates Channel ♻️', url='https://t.me/filmxhub20'),
                 InlineKeyboardButton('😊 About', callback_data='about')
             ]]
             reply_markup = InlineKeyboardMarkup(buttons)
@@ -413,7 +413,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
                     file_id = decoded
                 files_ = await get_file_details(file_id)
             except Exception:
-                pass
+                logger.debug("Could not decode file callback payload", exc_info=True)
         if not files_:
             return await query.answer('No such file exist.')
         files = files_[0]
@@ -446,7 +446,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
         await query.answer()
     elif query.data == "start":
         buttons = [[
-            InlineKeyboardButton('♻️ Updates Channel ♻️', url=f'https://t.me/filmxhub20'),
+            InlineKeyboardButton('♻️ Updates Channel ♻️', url='https://t.me/filmxhub20'),
             InlineKeyboardButton('😊 About', callback_data='about')
         ]]
         reply_markup = InlineKeyboardMarkup(buttons)
@@ -846,7 +846,7 @@ async def manual_filters(client, message, text=False):
                         if btn == "[]":
                             await client.send_message(group_id, reply_text, disable_web_page_preview=True)
                         else:
-                            button = eval(btn)
+                            button = deserialize_buttons(btn)
                             await client.send_message(
                                 group_id,
                                 reply_text,
@@ -862,7 +862,7 @@ async def manual_filters(client, message, text=False):
                             reply_to_message_id=reply_id
                         )
                     else:
-                        button = eval(btn)
+                        button = deserialize_buttons(btn)
                         await message.reply_cached_media(
                             fileid,
                             caption=reply_text or "",

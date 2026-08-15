@@ -60,7 +60,7 @@ async def addconnection(client, message):
                     quote=True,
                     parse_mode=enums.ParseMode.MARKDOWN
                 )
-                if chat_type in ["group", "supergroup"]:
+                if chat_type in [enums.ChatType.GROUP, enums.ChatType.SUPERGROUP]:
                     await client.send_message(
                         userid,
                         f"Connected to **{title}** !",
@@ -96,7 +96,7 @@ async def deleteconnection(client, message):
         if (
                 st.status != enums.ChatMemberStatus.ADMINISTRATOR
                 and st.status != enums.ChatMemberStatus.OWNER
-                and str(userid) not in ADMINS
+                and userid not in ADMINS
         ):
             return
 
@@ -132,8 +132,8 @@ async def connections(client, message):
                     )
                 ]
             )
-        except:
-            pass
+        except Exception:
+            logger.debug("Could not load connected group %s", groupid, exc_info=True)
     if buttons:
         await message.reply_text(
             "Your connected group details ;\n\n",

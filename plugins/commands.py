@@ -1,15 +1,16 @@
 import os
+import io
 import logging
-import random
+import secrets
 import asyncio
 from Script import script
 from pyrogram import Client, filters, enums
-from pyrogram.errors import ChatAdminRequired, FloodWait
+from pyrogram.errors import FloodWait
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from database.ia_filterdb import Media, get_file_details
 from database.users_chats_db import db
 from database.auto_delete_db import schedule_auto_delete
-from info import CHANNELS, ADMINS, AUTH_CHANNEL, LOG_CHANNEL, PICS, BATCH_FILE_CAPTION, CUSTOM_FILE_CAPTION, PROTECT_CONTENT
+from info import CHANNELS, ADMINS, LOG_CHANNEL, PICS, BATCH_FILE_CAPTION, CUSTOM_FILE_CAPTION, PROTECT_CONTENT
 from utils import get_settings, get_size, save_group_settings, temp
 from database.connections_mdb import active_connection
 from plugins.fsub import ForceSub
@@ -19,6 +20,17 @@ import base64
 logger = logging.getLogger(__name__)
 
 BATCH_FILES = {}
+
+
+def _load_downloaded_batch(path):
+    try:
+        with open(path, encoding='utf-8') as file_data:
+            return json.load(file_data)
+    finally:
+        try:
+            os.remove(path)
+        except FileNotFoundError:
+            pass
 
 
 @Client.on_message(filters.command("start") & filters.incoming)
@@ -43,12 +55,12 @@ async def start(client, message):
         await client.send_message(LOG_CHANNEL, script.LOG_TEXT_P.format(message.from_user.id, message.from_user.mention))
     if len(message.command) != 2:
         buttons = [[
-            InlineKeyboardButton('♻️ Updates Channel ♻️', url=f'https://t.me/filmxhub20'),
+            InlineKeyboardButton('♻️ Updates Channel ♻️', url='https://t.me/filmxhub20'),
             InlineKeyboardButton('😊 About', callback_data='about')
         ]]
         reply_markup = InlineKeyboardMarkup(buttons)
         await message.reply_photo(
-            photo=random.choice(PICS),
+            photo=secrets.choice(PICS),
             caption=script.START_TXT.format(message.from_user.mention, temp.U_NAME, temp.B_NAME),
             reply_markup=reply_markup,
             parse_mode=enums.ParseMode.HTML
@@ -61,12 +73,12 @@ async def start(client, message):
             return
 
         buttons = [[
-            InlineKeyboardButton('♻️ Updates Channel ♻️', url=f'https://t.me/filmxhub20'),
+            InlineKeyboardButton('♻️ Updates Channel ♻️', url='https://t.me/filmxhub20'),
             InlineKeyboardButton('😊 About', callback_data='about')
         ]]
         reply_markup = InlineKeyboardMarkup(buttons)
         await message.reply_photo(
-            photo=random.choice(PICS),
+            photo=secrets.choice(PICS),
             caption=script.START_TXT.format(message.from_user.mention, temp.U_NAME, temp.B_NAME),
             reply_markup=reply_markup,
             parse_mode=enums.ParseMode.HTML
@@ -93,13 +105,12 @@ async def start(client, message):
         if not msgs:
             post = await client.get_messages(LOG_CHANNEL, int(file_id))
             file = await client.download_media(post.document)
-            try: 
-                with open(file) as file_data:
-                    msgs=json.loads(file_data.read())
-            except:
+            try:
+                loop = asyncio.get_running_loop()
+                msgs = await loop.run_in_executor(None, _load_downloaded_batch, file)
+            except (OSError, json.JSONDecodeError, TypeError):
                 await message.reply("Invalid Link!")
-                return os.remove(file)
-            os.remove(file)
+                return
             BATCH_FILES[file_id] = msgs
         for msg in msgs:
             title = msg.get("title")
@@ -122,8 +133,8 @@ async def start(client, message):
                     )
                 await schedule_auto_delete(message.from_user.id, sent_msg.id)
             except FloodWait as e:
-                await asyncio.sleep(e.x)
-                logger.warning(f"Floodwait of {e.x} sec.")
+                await asyncio.sleep(e.value)
+                logger.warning(f"Floodwait of {e.value} sec.")
                 sent_msg = await client.send_cached_media(
                     chat_id=message.from_user.id,
                     file_id=msg.get("file_id"),
@@ -146,7 +157,6 @@ async def start(client, message):
         except:
             f_msg_id, l_msg_id, f_chat_id = decoded.split("_", 2)
             protect = "/pbatch" if PROTECT_CONTENT else "batch"
-        diff = int(l_msg_id) - int(f_msg_id)
         async for msg in client.iter_messages(int(f_chat_id), int(l_msg_id), int(f_msg_id)):
             if msg.media:
                 media = getattr(msg, msg.media.value)
@@ -163,7 +173,7 @@ async def start(client, message):
                 try:
                     await msg.copy(message.chat.id, caption=f_caption, protect_content=True if protect == "/pbatch" else False)
                 except FloodWait as e:
-                    await asyncio.sleep(e.x)
+                    await asyncio.sleep(e.value)
                     await msg.copy(message.chat.id, caption=f_caption, protect_content=True if protect == "/pbatch" else False)
                 except Exception as e:
                     logger.exception(e)
@@ -174,7 +184,7 @@ async def start(client, message):
                 try:
                     await msg.copy(message.chat.id, protect_content=True if protect == "/pbatch" else False)
                 except FloodWait as e:
-                    await asyncio.sleep(e.x)
+                    await asyncio.sleep(e.value)
                     await msg.copy(message.chat.id, protect_content=True if protect == "/pbatch" else False)
                 except Exception as e:
                     logger.exception(e)
@@ -244,11 +254,9 @@ async def channel_info(bot, message):
     if len(text) < 4096:
         await message.reply(text)
     else:
-        file = 'Indexed channels.txt'
-        with open(file, 'w') as f:
-            f.write(text)
+        file = io.BytesIO(text.encode('utf-8'))
+        file.name = 'Indexed channels.txt'
         await message.reply_document(file)
-        os.remove(file)
 
 
 @Client.on_message(filters.command('logs') & filters.user(ADMINS))
@@ -368,7 +376,7 @@ async def settings(client, message):
     if (
             st.status != enums.ChatMemberStatus.ADMINISTRATOR
             and st.status != enums.ChatMemberStatus.OWNER
-            and str(userid) not in ADMINS
+            and userid not in ADMINS
     ):
         return
 
@@ -483,7 +491,7 @@ async def save_template(client, message):
     if (
             st.status != enums.ChatMemberStatus.ADMINISTRATOR
             and st.status != enums.ChatMemberStatus.OWNER
-            and str(userid) not in ADMINS
+            and userid not in ADMINS
     ):
         return
 

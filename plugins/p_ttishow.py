@@ -1,7 +1,10 @@
-from pyrogram import Client, filters, enums
+import io
+import logging
+
+from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from pyrogram.errors.exceptions.bad_request_400 import MessageTooLong, PeerIdInvalid
-from info import ADMINS, LOG_CHANNEL, SUPPORT_CHAT, MELCOW_NEW_USERS
+from info import ADMINS, LOG_CHANNEL
 from database.users_chats_db import db
 from database.ia_filterdb import Media
 from utils import get_size, temp, get_settings
@@ -32,8 +35,8 @@ async def save_group(bot, message):
 
             try:
                 await k.pin()
-            except:
-                pass
+            except Exception:
+                logging.debug("Could not pin disabled-chat notice", exc_info=True)
             await bot.leave_chat(message.chat.id)
             return
         buttons = [[
@@ -51,8 +54,8 @@ async def save_group(bot, message):
                 if (temp.MELCOW).get('welcome') is not None:
                     try:
                         await (temp.MELCOW['welcome']).delete()
-                    except:
-                        pass
+                    except Exception:
+                        logging.debug("Could not remove previous welcome message", exc_info=True)
                 temp.MELCOW['welcome'] = await message.reply(f"<b>Hey , {u.mention}, Welcome to {message.chat.title}</b>")
 
 
@@ -91,7 +94,6 @@ async def disable_chat(bot, message):
         chat = message.text.split(None, 2)[1]
     else:
         chat = message.command[1]
-        reason = "No reason Provided"
     try:
         chat_ = int(chat)
     except:
@@ -183,8 +185,8 @@ async def ban_a_user(bot, message):
         reason = "No reason Provided"
     try:
         chat = int(chat)
-    except:
-        pass
+    except ValueError:
+        logging.debug("Ban target is not a numeric user ID")
     try:
         k = await bot.get_users(chat)
     except PeerIdInvalid:
@@ -207,17 +209,11 @@ async def ban_a_user(bot, message):
 async def unban_a_user(bot, message):
     if len(message.command) == 1:
         return await message.reply('Give me a user id / username')
-    r = message.text.split(None)
-    if len(r) > 2:
-        reason = message.text.split(None, 2)[2]
-        chat = message.text.split(None, 2)[1]
-    else:
-        chat = message.command[1]
-        reason = "No reason Provided"
+    chat = message.command[1]
     try:
         chat = int(chat)
-    except:
-        pass
+    except ValueError:
+        logging.debug("Unban target is not a numeric user ID")
     try:
         k = await bot.get_users(chat)
     except PeerIdInvalid:
@@ -250,9 +246,9 @@ async def list_users(bot, message):
     try:
         await raju.edit_text(out)
     except MessageTooLong:
-        with open('users.txt', 'w+') as outfile:
-            outfile.write(out)
-        await message.reply_document('users.txt', caption="List Of Users")
+        users_file = io.BytesIO(out.encode('utf-8'))
+        users_file.name = 'users.txt'
+        await message.reply_document(users_file, caption="List Of Users")
 
 @Client.on_message(filters.command('chats') & filters.user(ADMINS))
 async def list_chats(bot, message):
@@ -267,6 +263,6 @@ async def list_chats(bot, message):
     try:
         await raju.edit_text(out)
     except MessageTooLong:
-        with open('chats.txt', 'w+') as outfile:
-            outfile.write(out)
-        await message.reply_document('chats.txt', caption="List Of Chats")
+        chats_file = io.BytesIO(out.encode('utf-8'))
+        chats_file.name = 'chats.txt'
+        await message.reply_document(chats_file, caption="List Of Chats")

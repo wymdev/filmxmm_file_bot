@@ -1,13 +1,13 @@
+import io
+import json
+import logging
 import re
+
 from pyrogram import filters, Client, enums
 from pyrogram.errors.exceptions.bad_request_400 import ChannelInvalid, UsernameInvalid, UsernameNotModified
 from info import ADMINS, LOG_CHANNEL, FILE_STORE_CHANNEL, PUBLIC_FILE_STORE
 from utils import temp
-import re
-import os
-import json
 import base64
-import logging
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -27,7 +27,9 @@ async def gen_link_s(bot, message):
     file_type = replied.media
     if file_type not in [enums.MessageMediaType.VIDEO, enums.MessageMediaType.AUDIO, enums.MessageMediaType.DOCUMENT]:
         return await message.reply("Reply to a supported media")
-    if message.has_protected_content and message.chat.id not in ADMINS:
+    if message.has_protected_content and (
+        not message.from_user or message.from_user.id not in ADMINS
+    ):
         return await message.reply("okDa")
     media = getattr(replied, file_type.value)
     media.file_type = file_type.value
@@ -118,15 +120,19 @@ async def gen_link_batch(bot, message):
 
                 og_msg +=1
                 outlist.append(file)
-        except:
-            pass
+        except Exception:
+            logger.warning("Could not serialize message %s", msg.id, exc_info=True)
         if not og_msg % 20:
             try:
                 await sts.edit(FRMT.format(total=l_msg_id-f_msg_id, current=tot, rem=((l_msg_id-f_msg_id) - tot), sts="Saving Messages"))
-            except:
-                pass
-    with open(f"batchmode_{message.from_user.id}.json", "w+") as out:
-        json.dump(outlist, out)
-    post = await bot.send_document(LOG_CHANNEL, f"batchmode_{message.from_user.id}.json", file_name="Batch.json", caption="⚠️Generated for filestore.")
-    os.remove(f"batchmode_{message.from_user.id}.json")
+            except Exception:
+                logger.debug("Could not update batch progress", exc_info=True)
+    batch_file = io.BytesIO(json.dumps(outlist).encode('utf-8'))
+    batch_file.name = f"batchmode_{message.from_user.id}.json"
+    post = await bot.send_document(
+        LOG_CHANNEL,
+        batch_file,
+        file_name="Batch.json",
+        caption="⚠️Generated for filestore.",
+    )
     await sts.edit(f"Here is your link\nContains `{og_msg}` files.\n https://t.me/{temp.U_NAME}?start=BATCH-{post.id}")

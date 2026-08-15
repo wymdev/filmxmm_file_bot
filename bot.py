@@ -1,6 +1,7 @@
 import logging
 import logging.config
 import asyncio
+from contextlib import suppress
 
 # Get logging configurations
 logging.config.fileConfig('logging.conf')
@@ -9,8 +10,10 @@ logging.getLogger("pyrogram").setLevel(logging.ERROR)
 logging.getLogger("imdbpy").setLevel(logging.ERROR)
 
 from pyrogram import Client, __version__, enums
+from pyrogram.errors import MessageIdInvalid
 from pyrogram.raw.all import layer
 from database.ia_filterdb import Media
+from database.mongo import RETRYABLE_MONGO_ERRORS, retry_mongo_operation
 from database.users_chats_db import db
 from database.auto_delete_db import ensure_auto_delete_indexes, get_expired_messages, remove_entry
 from info import SESSION, API_ID, API_HASH, BOT_TOKEN, LOG_STR
@@ -32,11 +35,22 @@ class Bot(Client):
         )
 
     async def start(self):
-        b_users, b_chats = await db.get_banned()
+        ban_cache_loaded = True
+        try:
+            b_users, b_chats = await db.get_banned()
+        except RETRYABLE_MONGO_ERRORS:
+            ban_cache_loaded = False
+            logging.exception(
+                "Could not load banned users/chats from MongoDB at startup; "
+                "continuing with empty ban caches."
+            )
+            b_users, b_chats = [], []
         temp.BANNED_USERS = b_users
         temp.BANNED_CHATS = b_chats
         await super().start()
-        await Media.ensure_indexes()
+        await db.ensure_indexes()
+        await retry_mongo_operation("media index initialization", Media.ensure_indexes)
+        await ensure_auto_delete_indexes()
         me = await self.get_me()
         temp.ME = me.id
         temp.U_NAME = me.username
@@ -45,31 +59,51 @@ class Bot(Client):
         logging.info(f"{me.first_name} with for Pyrogram v{__version__} (Layer {layer}) started on {me.username}.")
         logging.info(LOG_STR)
 
-        # Ensure auto-delete indexes and start the background cleanup loop
-        await ensure_auto_delete_indexes()
-        self._auto_delete_task = asyncio.create_task(self._auto_delete_loop())
+        # Keep persisted maintenance state current for long-running processes.
+        self._auto_delete_task = asyncio.create_task(
+            self._auto_delete_loop(),
+            name='auto-delete-loop',
+        )
+        self._ban_refresh_task = asyncio.create_task(
+            self._ban_refresh_loop(initial_delay=30 if not ban_cache_loaded else 300),
+            name='ban-refresh-loop',
+        )
 
         # Resolve Force Subscribe channel peer ID at startup to avoid PeerIdInvalid errors
         from info import AUTH_CHANNEL, REQ_CHANNEL
         for channel_id in [AUTH_CHANNEL, REQ_CHANNEL]:
             if channel_id:
                 try:
-                    await self.get_chat(int(channel_id))
-                except Exception as e:
-                    logging.warning(f"Failed to resolve channel {channel_id} by ID: {e}")
-                    # Try username resolution fallback
-                    if int(channel_id) == -1003922880580:
-                        try:
-                            await self.get_chat("@filmxhub20")
-                            logging.info("Successfully resolved and cached channel @filmxhub20 peer.")
-                        except Exception as err:
-                            logging.error(f"Failed to resolve channel @filmxhub20 username: {err}")
+                    await self.get_chat(channel_id)
+                except Exception:
+                    logging.exception("Failed to resolve configured channel %s", channel_id)
 
     async def stop(self, *args):
-        if hasattr(self, '_auto_delete_task'):
-            self._auto_delete_task.cancel()
-        await super().stop()
+        tasks = [
+            getattr(self, '_auto_delete_task', None),
+            getattr(self, '_ban_refresh_task', None),
+        ]
+        for task in filter(None, tasks):
+            task.cancel()
+        for task in filter(None, tasks):
+            with suppress(asyncio.CancelledError):
+                await task
+        await super().stop(*args)
         logging.info("Bot stopped. Bye.")
+
+    async def _ban_refresh_loop(self, initial_delay):
+        """Refresh ban caches so startup fallbacks and remote changes recover."""
+        await asyncio.sleep(initial_delay)
+        while True:
+            try:
+                b_users, b_chats = await db.get_banned()
+                temp.BANNED_USERS = b_users
+                temp.BANNED_CHATS = b_chats
+            except RETRYABLE_MONGO_ERRORS:
+                logging.exception("Could not refresh banned users/chats from MongoDB")
+            except Exception:
+                logging.exception("Unexpected error while refreshing banned users/chats")
+            await asyncio.sleep(300)
 
     async def _auto_delete_loop(self):
         """Background loop that checks MongoDB every 5 minutes for expired messages and deletes them."""
@@ -83,8 +117,25 @@ class Bot(Client):
                             chat_id=entry['chat_id'],
                             message_ids=entry['message_id']
                         )
-                        logging.info(f"Auto-deleted msg {entry['message_id']} in chat {entry['chat_id']}")
-                        # Send DMCA copyright notice after deletion
+                    except MessageIdInvalid:
+                        logging.info(
+                            "Auto-delete message %s in chat %s was already absent",
+                            entry['message_id'],
+                            entry['chat_id'],
+                        )
+                    except Exception:
+                        logging.exception(
+                            "Failed to auto-delete msg %s in chat %s; keeping it queued",
+                            entry['message_id'],
+                            entry['chat_id'],
+                        )
+                        continue
+                    else:
+                        logging.info(
+                            "Auto-deleted msg %s in chat %s",
+                            entry['message_id'],
+                            entry['chat_id'],
+                        )
                         try:
                             await self.send_message(
                                 chat_id=entry['chat_id'],
@@ -97,14 +148,14 @@ class Bot(Client):
                                 ),
                                 parse_mode=enums.ParseMode.HTML
                             )
-                        except Exception as notify_err:
-                            logging.warning(f"Failed to send DMCA notice to chat {entry['chat_id']}: {notify_err}")
-                    except Exception as e:
-                        logging.warning(f"Failed to auto-delete msg {entry['message_id']} in chat {entry['chat_id']}: {e}")
-                    # Remove from queue regardless (message may already be deleted manually)
+                        except Exception:
+                            logging.exception(
+                                "Failed to send deletion notice to chat %s",
+                                entry['chat_id'],
+                            )
                     await remove_entry(entry['_id'])
-            except Exception as e:
-                logging.error(f"Error in auto-delete loop: {e}")
+            except Exception:
+                logging.exception("Error in auto-delete loop")
             await asyncio.sleep(300)  # Check every 5 minutes
     
     async def iter_messages(
@@ -148,4 +199,6 @@ class Bot(Client):
 
 
 app = Bot()
-app.run()
+
+if __name__ == "__main__":
+    app.run()

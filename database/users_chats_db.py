@@ -1,11 +1,11 @@
 # https://github.com/odysseusmax/animated-lamp/blob/master/bot/database/database.py
-import motor.motor_asyncio
+from database.mongo import create_motor_client, retry_mongo_operation
 from info import DATABASE_NAME, DATABASE_URI, IMDB, IMDB_TEMPLATE, MELCOW_NEW_USERS, P_TTI_SHOW_OFF, SINGLE_BUTTON, SPELL_CHECK_REPLY, PROTECT_CONTENT
 
 class Database:
     
     def __init__(self, uri, database_name):
-        self._client = motor.motor_asyncio.AsyncIOMotorClient(uri)
+        self._client = create_motor_client(uri)
         self.db = self._client[database_name]
         self.col = self.db.users
         self.grp = self.db.groups
@@ -13,7 +13,7 @@ class Database:
 
     def new_user(self, id, name):
         return dict(
-            id = id,
+            id = int(id),
             name = name,
             ban_status=dict(
                 is_banned=False,
@@ -24,7 +24,7 @@ class Database:
 
     def new_group(self, id, title):
         return dict(
-            id = id,
+            id = int(id),
             title = title,
             chat_status=dict(
                 is_disabled=False,
@@ -34,7 +34,17 @@ class Database:
     
     async def add_user(self, id, name):
         user = self.new_user(id, name)
-        await self.col.insert_one(user)
+        await self.col.update_one(
+            {'id': int(id)},
+            {
+                '$setOnInsert': {
+                    'id': user['id'],
+                    'ban_status': user['ban_status'],
+                },
+                '$set': {'name': name},
+            },
+            upsert=True,
+        )
     
     async def is_user_exist(self, id):
         user = await self.col.find_one({'id':int(id)})
@@ -76,18 +86,38 @@ class Database:
         await self.col.delete_many({'id': int(user_id)})
 
 
-    async def get_banned(self):
-        users = self.col.find({'ban_status.is_banned': True})
-        chats = self.grp.find({'chat_status.is_disabled': True})
+    async def _get_banned(self):
+        users = self.col.find({'ban_status.is_banned': True}, {'id': 1})
+        chats = self.grp.find({'chat_status.is_disabled': True}, {'id': 1})
         b_chats = [chat['id'] async for chat in chats]
         b_users = [user['id'] async for user in users]
         return b_users, b_chats
+
+    async def get_banned(self):
+        return await retry_mongo_operation("get_banned", self._get_banned)
     
 
 
     async def add_chat(self, chat, title):
-        chat = self.new_group(chat, title)
-        await self.grp.insert_one(chat)
+        group = self.new_group(chat, title)
+        await self.grp.update_one(
+            {'id': int(chat)},
+            {
+                '$setOnInsert': {
+                    'id': group['id'],
+                    'chat_status': group['chat_status'],
+                },
+                '$set': {'title': title},
+            },
+            upsert=True,
+        )
+
+    async def ensure_indexes(self):
+        async def create_indexes():
+            await self.col.create_index('id')
+            await self.grp.create_index('id')
+
+        await retry_mongo_operation('user and group index initialization', create_indexes)
     
 
     async def get_chat(self, chat):

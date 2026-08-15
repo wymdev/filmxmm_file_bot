@@ -46,7 +46,7 @@ async def addfilter(client, message):
     if (
         st.status != enums.ChatMemberStatus.ADMINISTRATOR
         and st.status != enums.ChatMemberStatus.OWNER
-        and str(userid) not in ADMINS
+        and userid not in ADMINS
     ):
         return
 
@@ -148,7 +148,7 @@ async def get_all(client, message):
     if (
         st.status != enums.ChatMemberStatus.ADMINISTRATOR
         and st.status != enums.ChatMemberStatus.OWNER
-        and str(userid) not in ADMINS
+        and userid not in ADMINS
     ):
         return
 
@@ -191,8 +191,7 @@ async def deletefilter(client, message):
         if grpid is not None:
             grp_id = grpid
             try:
-                chat = await client.get_chat(grpid)
-                title = chat.title
+                await client.get_chat(grpid)
             except:
                 await message.reply_text("Make sure I'm present in your group!!", quote=True)
                 return
@@ -202,7 +201,6 @@ async def deletefilter(client, message):
 
     elif chat_type in [enums.ChatType.GROUP, enums.ChatType.SUPERGROUP]:
         grp_id = message.chat.id
-        title = message.chat.title
 
     else:
         return
@@ -211,7 +209,7 @@ async def deletefilter(client, message):
     if (
         st.status != enums.ChatMemberStatus.ADMINISTRATOR
         and st.status != enums.ChatMemberStatus.OWNER
-        and str(userid) not in ADMINS
+        and userid not in ADMINS
     ):
         return
 
@@ -261,7 +259,7 @@ async def delallconfirm(client, message):
 
 
     st = await client.get_chat_member(grp_id, userid)
-    if (st.status == enums.ChatMemberStatus.OWNER) or (str(userid) in ADMINS):
+    if (st.status == enums.ChatMemberStatus.OWNER) or (userid in ADMINS):
         await message.reply_text(
             f"This will delete all filters from '{title}'.\nDo you want to continue??",
             reply_markup=InlineKeyboardMarkup([
@@ -270,4 +268,3 @@ async def delallconfirm(client, message):
             ]),
             quote=True
         )
-

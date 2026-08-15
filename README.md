@@ -24,8 +24,12 @@ Optimized for FilmX community deployments.
 
 ### Setup
 
-- Add the bot to Database Channel with all permission
-- Add bot to ForceSub channel as Admin with Invite Users via Link Permission if you enabled ForceSub 
+- Create a bot with [@BotFather](https://t.me/BotFather) and get Telegram API credentials from [my.telegram.org](https://my.telegram.org).
+- Create a MongoDB database and copy `.env.example` to `.env` for local use.
+- Add the bot to the channels listed in `CHANNELS` and `LOG_CHANNEL` with the permissions needed to read and send messages.
+- If force subscribe is enabled, add the bot to `AUTH_CHANNEL` or `REQ_CHANNEL` as an admin with invite-user permission.
+
+The bot validates required configuration during startup. It will report the exact missing variable instead of using embedded credentials.
 
 ##
 ### Installation
@@ -51,11 +55,12 @@ The fastest way to deploy the application is to click the **Deploy to Koyeb** bu
 
 #### Deploy in your VPS
 ````bash
-git clone https://github.com/VJBots/Advance-File-Share-Bot
-cd File-Sharing-Bot
+git clone <your-repository-url>
+cd filmxbot
+cp .env.example .env
+# Edit .env with your deployment values.
 pip3 install -r requirements.txt
-# <Create config.py appropriately>
-python3 main.py
+python3 bot.py
 ````
 
 ### Admin Commands
@@ -76,25 +81,28 @@ python3 main.py
 
 ### Variables
 
-* `API_HASH` Your API Hash from my.telegram.org
-* `APP_ID` Your API ID from my.telegram.org
-* `BOT_TOKEN` Your bot token from @BotFather
-* `OWNER_ID` Must enter Your Telegram Id
-* `CHANNEL_ID` Your Channel ID eg:- -100xxxxxxxx
-* `DATABASE_URL` Your mongo db url
-* `DATABASE_NAME` Your mongo db session name
-* `ADMINS` Optional: A space separated list of user_ids of Admins, they can only create links
-* `START_MESSAGE` Optional: start message of bot, use HTML and <a href='https://github.com/VJBots/Advance-File-Share-Bot/blob/main/README.md#start_message'>fillings</a>
-* `FORCE_SUB_MESSAGE`Optional:Force sub message of bot, use HTML and Fillings
-* `FORCE_SUB_CHANNEL` Optional: ForceSub Channel ID, leave 0 if you want disable force sub
-* `PROTECT_CONTENT` Optional: True if you need to prevent files from forwarding
+- `API_ID`, `API_HASH`, `BOT_TOKEN`: required Telegram credentials.
+- `DATABASE_URI`: required MongoDB connection string.
+- `ADMINS`: required, space-separated Telegram user IDs or usernames.
+- `LOG_CHANNEL`: required Telegram channel ID used for logs and stored batch data.
+- `CHANNELS`: optional space-separated source channel IDs or usernames to index.
+- `DATABASE_NAME`: optional database name; defaults to `FilmXBot`.
+- `COLLECTION_NAME`: optional media collection; defaults to `Telegram_files`.
+- `AUTH_CHANNEL`: optional force-subscribe channel ID.
+- `REQ_CHANNEL`: optional request-to-join channel ID.
+- `FILE_STORE_CHANNEL`: optional space-separated channel IDs used for direct-store links.
+- `PROTECT_CONTENT`: optional boolean controlling forwarding protection.
+- `USE_CAPTION_FILTER`: optional boolean enabling caption search.
+
+See [.env.example](.env.example) for a minimal working configuration.
 
 ### Extra Variables
 
-* `CUSTOM_CAPTION` put your Custom caption text if you want Setup Custom Caption, you can use HTML and <a href='https://github.com/VJBots/Advance-File-Share-Bot/blob/main/README.md#custom_caption'>fillings</a> for formatting (only for documents)
-* `DISABLE_CHANNEL_BUTTON` Put True to Disable Channel Share Button, Default if False
-* `BOT_STATS_TEXT` put your custom text for stats command, use HTML and <a href='https://github.com/VJBots/Advance-File-Share-Bot/blob/main/README.md#custom_stats'>fillings</a>
-* `USER_REPLY_TEXT` put your text to show when user sends any message, use HTML
+- `CUSTOM_FILE_CAPTION`: custom HTML caption for delivered files.
+- `BATCH_FILE_CAPTION`: custom HTML caption for batch-delivered files.
+- `PUBLIC_FILE_STORE`: allow all users to create share links when enabled.
+- `CACHE_TIME`: inline result cache duration in seconds.
+- `PICS`: space-separated image URLs used by bot responses.
 
 
 ### Fillings
