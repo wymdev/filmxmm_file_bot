@@ -9,7 +9,8 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir -r requirements.txt \
     && addgroup --system bot \
-    && adduser --system --ingroup bot bot
+    && adduser --system --ingroup bot bot \
+    && chown bot:bot /app
 
 COPY --chown=bot:bot . .
 

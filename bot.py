@@ -3,8 +3,16 @@ import logging.config
 import asyncio
 from contextlib import suppress
 
-# Get logging configurations
-logging.config.fileConfig('logging.conf')
+# File logging is optional on read-only container filesystems.
+try:
+    logging.config.fileConfig('logging.conf')
+except OSError as error:
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        force=True,
+    )
+    logging.warning("File logging is unavailable; using console logging only: %s", error)
 logging.getLogger().setLevel(logging.INFO)
 logging.getLogger("pyrogram").setLevel(logging.ERROR)
 logging.getLogger("imdbpy").setLevel(logging.ERROR)
