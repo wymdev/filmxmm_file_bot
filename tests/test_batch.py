@@ -1,4 +1,5 @@
 import base64
+import json
 import os
 import unittest
 from types import SimpleNamespace
@@ -14,7 +15,12 @@ os.environ.setdefault("LOG_CHANNEL", "-100123456")
 
 from bot import Bot
 from plugins import commands
-from plugins.genlink import gen_link_batch, parse_batch_link
+from plugins.genlink import (
+    PENDING_BATCHES,
+    collect_forwarded_batch,
+    gen_link_batch,
+    parse_batch_link,
+)
 
 
 class BatchLinkTests(unittest.TestCase):
@@ -34,6 +40,9 @@ class BatchLinkTests(unittest.TestCase):
 
 
 class BatchGenerationTests(unittest.IsolatedAsyncioTestCase):
+    async def asyncSetUp(self):
+        PENDING_BATCHES.clear()
+
     async def test_accepts_extra_whitespace_and_reversed_endpoints(self):
         status = SimpleNamespace(edit=AsyncMock())
         message = SimpleNamespace(
@@ -77,6 +86,94 @@ class BatchGenerationTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(bot.iter_args, (-1001234567890, 20, 10))
         bot.send_document.assert_awaited_once()
         self.assertIn("Contains `1` files", status.edit.await_args.args[0])
+
+    async def test_three_links_select_only_the_exact_messages(self):
+        status = SimpleNamespace(edit=AsyncMock())
+        message = SimpleNamespace(
+            text=(
+                "/batch https://t.me/c/1234567890/10 "
+                "https://t.me/c/1234567890/20 "
+                "https://t.me/c/1234567890/30"
+            ),
+            from_user=SimpleNamespace(id=7),
+            reply=AsyncMock(return_value=status),
+        )
+
+        class FakeBot:
+            def __init__(self):
+                self.requested_ids = []
+                self.send_document = AsyncMock(return_value=SimpleNamespace(id=55))
+
+            async def get_chat(self, chat_id):
+                return SimpleNamespace(id=chat_id)
+
+            async def get_messages(self, chat_id, message_id):
+                self.requested_ids.append(message_id)
+                media = SimpleNamespace(
+                    file_id=f"file-{message_id}",
+                    file_name=f"{message_id}.mkv",
+                    file_size=100,
+                )
+                return SimpleNamespace(
+                    id=message_id,
+                    empty=False,
+                    service=False,
+                    media=SimpleNamespace(value="document"),
+                    document=media,
+                    caption="",
+                )
+
+            async def iter_messages(self, *args):
+                raise AssertionError("Three links must not be expanded as a range")
+                yield
+
+        bot = FakeBot()
+        with patch("plugins.genlink.temp.U_NAME", "test_bot", create=True):
+            await gen_link_batch(bot, message)
+
+        self.assertEqual(bot.requested_ids, [10, 20, 30])
+        manifest = bot.send_document.await_args.args[1]
+        self.assertEqual(
+            [item["file_id"] for item in json.loads(manifest.getvalue())],
+            ["file-10", "file-20", "file-30"],
+        )
+
+    async def test_forwarded_media_then_batch_uses_the_queue(self):
+        forwarded_media = SimpleNamespace(
+            file_id="forwarded-file",
+            file_name="forwarded.mkv",
+            file_size=200,
+        )
+        forwarded = SimpleNamespace(
+            id=1,
+            from_user=SimpleNamespace(id=7),
+            empty=False,
+            service=False,
+            media=SimpleNamespace(value="document"),
+            document=forwarded_media,
+            caption="Forwarded caption",
+            reply=AsyncMock(),
+        )
+        await collect_forwarded_batch(None, forwarded)
+
+        status = SimpleNamespace(edit=AsyncMock())
+        command = SimpleNamespace(
+            text="/pbatch",
+            from_user=SimpleNamespace(id=7),
+            reply=AsyncMock(return_value=status),
+        )
+        bot = SimpleNamespace(
+            send_document=AsyncMock(return_value=SimpleNamespace(id=55))
+        )
+        with patch("plugins.genlink.temp.U_NAME", "test_bot", create=True):
+            await gen_link_batch(bot, command)
+
+        manifest = bot.send_document.await_args.args[1]
+        stored = json.loads(manifest.getvalue())
+        self.assertEqual(len(stored), 1)
+        self.assertEqual(stored[0]["file_id"], "forwarded-file")
+        self.assertTrue(stored[0]["protect"])
+        self.assertNotIn(7, PENDING_BATCHES)
 
 
 class MessageRangeTests(unittest.IsolatedAsyncioTestCase):

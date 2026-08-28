@@ -68,7 +68,7 @@ python3 bot.py
 ```
 /start - start the bot or get posts
 
-/batch - create link for more than one posts
+/batch - create a link from forwarded media or Telegram post links
 
 /link - create link for one post
 
@@ -78,6 +78,21 @@ python3 bot.py
 
 /stats - checking your bot uptime
 ```
+
+Batch creation supports either of these workflows:
+
+```text
+# Selected posts (three or more links select only those posts)
+/batch link1 link2 link3
+
+# Inclusive range (exactly two links from the same chat)
+/batch first_post_link last_post_link
+
+# Forward media files to the bot, then send
+/batch
+```
+
+Use `/pbatch` instead of `/batch` to protect the delivered files from forwarding.
 
 ### Variables
 
