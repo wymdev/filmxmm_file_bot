@@ -53,12 +53,21 @@ def serialize_batch_message(message, protect=False):
     }
 
 
+def batch_requester_id(message):
+    """Return a stable ID even for anonymous-admin/channel commands."""
+    if message.from_user:
+        return message.from_user.id
+    if getattr(message, "sender_chat", None):
+        return message.sender_chat.id
+    return message.chat.id
+
+
 async def publish_batch(bot, message, status, files):
     """Store a batch manifest and edit the status with its deep link."""
     if not files:
         return await status.edit("No media files were found for this batch.")
     batch_file = io.BytesIO(json.dumps(files).encode("utf-8"))
-    batch_file.name = f"batchmode_{message.from_user.id}.json"
+    batch_file.name = f"batchmode_{batch_requester_id(message)}.json"
     post = await bot.send_document(
         LOG_CHANNEL,
         batch_file,
@@ -154,7 +163,8 @@ async def gen_link_batch(bot, message):
 
     # Forwarded-media workflow: forward files first, then send /batch.
     if not link_texts:
-        pending = PENDING_BATCHES.get(message.from_user.id, [])
+        requester_id = batch_requester_id(message)
+        pending = PENDING_BATCHES.get(requester_id, [])
         if not pending:
             return await message.reply(
                 "Nothing is queued. Forward media files to me and then send /batch, "
@@ -169,7 +179,7 @@ async def gen_link_batch(bot, message):
         except Exception:
             logger.exception("Could not publish forwarded batch")
             return await status.edit("I could not create the batch. Please try again.")
-        PENDING_BATCHES.pop(message.from_user.id, None)
+        PENDING_BATCHES.pop(requester_id, None)
         return
 
     try:

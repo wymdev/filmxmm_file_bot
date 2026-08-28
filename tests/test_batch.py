@@ -17,6 +17,7 @@ from bot import Bot
 from plugins import commands
 from plugins.genlink import (
     PENDING_BATCHES,
+    batch_requester_id,
     collect_forwarded_batch,
     gen_link_batch,
     parse_batch_link,
@@ -37,6 +38,14 @@ class BatchLinkTests(unittest.TestCase):
     def test_rejects_non_post_links(self):
         with self.assertRaises(ValueError):
             parse_batch_link("https://example.com/channel/20")
+
+    def test_anonymous_admin_uses_sender_chat_id(self):
+        message = SimpleNamespace(
+            from_user=None,
+            sender_chat=SimpleNamespace(id=-1009876543210),
+            chat=SimpleNamespace(id=-1001234567890),
+        )
+        self.assertEqual(batch_requester_id(message), -1009876543210)
 
 
 class BatchGenerationTests(unittest.IsolatedAsyncioTestCase):
@@ -137,6 +146,42 @@ class BatchGenerationTests(unittest.IsolatedAsyncioTestCase):
             [item["file_id"] for item in json.loads(manifest.getvalue())],
             ["file-10", "file-20", "file-30"],
         )
+
+    async def test_anonymous_admin_can_publish_link_batch(self):
+        status = SimpleNamespace(edit=AsyncMock())
+        message = SimpleNamespace(
+            text="/batch https://t.me/c/1234567890/10",
+            from_user=None,
+            sender_chat=SimpleNamespace(id=-1009999999999),
+            chat=SimpleNamespace(id=-1001111111111),
+            reply=AsyncMock(return_value=status),
+        )
+        media = SimpleNamespace(
+            file_id="file-10",
+            file_name="10.mkv",
+            file_size=100,
+        )
+        bot = SimpleNamespace(
+            get_chat=AsyncMock(return_value=SimpleNamespace(id=-1001234567890)),
+            get_messages=AsyncMock(
+                return_value=SimpleNamespace(
+                    id=10,
+                    empty=False,
+                    service=False,
+                    media=SimpleNamespace(value="document"),
+                    document=media,
+                    caption="",
+                )
+            ),
+            send_document=AsyncMock(return_value=SimpleNamespace(id=55)),
+        )
+
+        with patch("plugins.genlink.temp.U_NAME", "test_bot", create=True):
+            await gen_link_batch(bot, message)
+
+        manifest = bot.send_document.await_args.args[1]
+        self.assertEqual(manifest.name, "batchmode_-1009999999999.json")
+        self.assertIn("Contains `1` files", status.edit.await_args.args[0])
 
     async def test_forwarded_media_then_batch_uses_the_queue(self):
         forwarded_media = SimpleNamespace(
