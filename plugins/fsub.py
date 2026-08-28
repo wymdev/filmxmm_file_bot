@@ -9,6 +9,7 @@ from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message
 
 from database.join_reqs import join_reqs
 from info import REQ_CHANNEL, AUTH_CHANNEL, JOIN_REQS_DB, ADMINS
+from utils import temp
 
 from logging import getLogger
 
@@ -114,12 +115,22 @@ To download the requested file, please follow these steps:
 1. Click the **Request to Join Channel** button below.
 2. After request approval, return here and click **Try Again** to receive your file!"""
 
+        retry_button = (
+            InlineKeyboardButton(
+                " 🔄 Try Again 🔄 ",
+                url=f"https://t.me/{temp.U_NAME}?start={file_id}",
+            )
+            if str(file_id).startswith(("BATCH-", "DSTORE-"))
+            else InlineKeyboardButton(
+                " 🔄 Try Again 🔄 ", callback_data=f"{mode}#{file_id}"
+            )
+        )
         buttons = [
             [
                 InlineKeyboardButton("📢 Request to Join Channel 📢", url=invite_link)
             ],
             [
-                InlineKeyboardButton(" 🔄 Try Again 🔄 ", callback_data=f"{mode}#{file_id}")
+                retry_button
             ],
             [
                 InlineKeyboardButton("Update", url="https://t.me/filmxhub20"),

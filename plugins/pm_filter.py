@@ -389,7 +389,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
         if (AUTH_CHANNEL or REQ_CHANNEL) and not await is_subscribed(client, query):
             await query.answer("I Like Your Smartness, But Don't Be Oversmart 😒", show_alert=True)
             return
-        ident, file_id = query.data.split("#")
+        ident, file_id = query.data.split("#", 1)
         if file_id in ["False", "subscribe"] or not file_id:
             await query.answer()
             buttons = [[
@@ -403,6 +403,30 @@ async def cb_handler(client: Client, query: CallbackQuery):
                 parse_mode=enums.ParseMode.HTML
             )
             return
+        if file_id.startswith(("BATCH-", "DSTORE-")):
+            await query.answer()
+            try:
+                await query.message.delete()
+            except Exception:
+                logger.warning("Failed to delete batch join prompt", exc_info=True)
+            from plugins.commands import (
+                deliver_direct_store_batch,
+                deliver_saved_batch,
+            )
+            kind, payload = file_id.split("-", 1)
+            if kind == "BATCH":
+                return await deliver_saved_batch(
+                    client,
+                    query.message,
+                    payload,
+                    recipient_id=query.from_user.id,
+                )
+            return await deliver_direct_store_batch(
+                client,
+                query.message,
+                payload,
+                recipient_id=query.from_user.id,
+            )
         files_ = await get_file_details(file_id)
         if not files_:
             try:

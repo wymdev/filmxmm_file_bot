@@ -49,6 +49,188 @@ def _load_downloaded_batch(path):
             pass
 
 
+async def _schedule_batch_delete(chat_id, sent_message):
+    """Schedule deletion without treating a database hiccup as a send failure."""
+    try:
+        await schedule_auto_delete(chat_id, sent_message.id)
+    except Exception:
+        logger.warning(
+            "Could not schedule auto-delete for batch message %s in chat %s",
+            sent_message.id,
+            chat_id,
+            exc_info=True,
+        )
+
+
+async def deliver_saved_batch(client, message, file_id, recipient_id=None):
+    """Download and deliver a JSON-backed batch link."""
+    recipient_id = recipient_id or message.chat.id
+    sts = await client.send_message(recipient_id, "Preparing your files…")
+    msgs = BATCH_FILES.get(file_id)
+    if msgs is None:
+        try:
+            post = await client.get_messages(LOG_CHANNEL, int(file_id))
+            if not post or post.empty or not post.document:
+                raise ValueError("Batch document is missing")
+            file = await client.download_media(post.document)
+            if not file:
+                raise OSError("Batch document could not be downloaded")
+            loop = asyncio.get_running_loop()
+            msgs = await loop.run_in_executor(None, _load_downloaded_batch, file)
+            if not isinstance(msgs, list) or not all(isinstance(item, dict) for item in msgs):
+                raise ValueError("Invalid batch document")
+        except Exception:
+            logger.warning("Could not load batch %s", file_id, exc_info=True)
+            await sts.edit("This batch link is invalid or has expired.")
+            return
+        BATCH_FILES[file_id] = msgs
+
+    sent_count = 0
+    failed_count = 0
+    for msg in msgs:
+        title = msg.get("title")
+        try:
+            size = get_size(int(msg.get("size") or 0))
+        except (TypeError, ValueError):
+            size = ""
+        original_caption = msg.get("caption") or (title or "")
+        f_caption = original_caption
+        if BATCH_FILE_CAPTION:
+            try:
+                f_caption = BATCH_FILE_CAPTION.format(
+                    file_name=title or "",
+                    file_size=size or "",
+                    file_caption=original_caption,
+                )
+            except Exception:
+                logger.warning("Could not format batch caption", exc_info=True)
+
+        async def send(caption):
+            return await client.send_cached_media(
+                chat_id=recipient_id,
+                file_id=msg.get("file_id"),
+                caption=caption,
+                protect_content=bool(msg.get("protect", False)),
+            )
+
+        try:
+            try:
+                sent_msg = await send(f_caption)
+            except FloodWait as error:
+                await asyncio.sleep(error.value)
+                sent_msg = await send(f_caption)
+            except Exception:
+                # A custom template can exceed Telegram's caption limit or
+                # contain invalid markup.  Preserve delivery with the original
+                # caption when possible.
+                if f_caption == original_caption:
+                    raise
+                logger.warning("Retrying batch item with its original caption", exc_info=True)
+                sent_msg = await send(original_caption)
+            sent_count += 1
+            await _schedule_batch_delete(recipient_id, sent_msg)
+        except Exception:
+            failed_count += 1
+            logger.warning("Could not send an item from batch %s", file_id, exc_info=True)
+        await asyncio.sleep(1)
+
+    if failed_count:
+        await sts.edit(
+            f"Sent {sent_count} file(s). {failed_count} file(s) could not be sent."
+        )
+    elif sent_count:
+        await sts.delete()
+    else:
+        await sts.edit("This batch does not contain any files.")
+
+
+async def deliver_direct_store_batch(client, message, encoded_data, recipient_id=None):
+    """Deliver a direct-store batch payload and report malformed links."""
+    recipient_id = recipient_id or message.chat.id
+    sts = await client.send_message(recipient_id, "Preparing your files…")
+    try:
+        decoded = base64.urlsafe_b64decode(
+            encoded_data + "=" * (-len(encoded_data) % 4)
+        ).decode("ascii")
+        try:
+            first_id, last_id, chat_id, protect = decoded.split("_", 3)
+        except ValueError:
+            first_id, last_id, chat_id = decoded.split("_", 2)
+            protect = "p" if PROTECT_CONTENT else "u"
+        first_id, last_id, chat_id = int(first_id), int(last_id), int(chat_id)
+        first_id, last_id = sorted((first_id, last_id))
+    except (ValueError, UnicodeError):
+        await sts.edit("This batch link is invalid or has expired.")
+        return
+
+    sent_count = 0
+    failed_count = 0
+    try:
+        async for msg in client.iter_messages(chat_id, last_id, first_id):
+            if msg.empty:
+                continue
+            is_media = bool(msg.media)
+            copy_kwargs = {
+                "protect_content": protect in ("p", "/pbatch"),
+            }
+            original_caption = ""
+            try:
+                if is_media:
+                    media = getattr(msg, msg.media.value)
+                    original_caption = getattr(msg, "caption", "") or ""
+                    if BATCH_FILE_CAPTION:
+                        try:
+                            f_caption = BATCH_FILE_CAPTION.format(
+                                file_name=getattr(media, "file_name", "") or "",
+                                file_size=get_size(getattr(media, "file_size", 0) or 0),
+                                file_caption=original_caption,
+                            )
+                        except Exception:
+                            logger.warning("Could not format direct batch caption", exc_info=True)
+                            f_caption = original_caption
+                    else:
+                        f_caption = original_caption or getattr(media, "file_name", "")
+                    copy_kwargs["caption"] = f_caption
+
+                async def copy_message():
+                    return await msg.copy(recipient_id, **copy_kwargs)
+
+                try:
+                    sent_msg = await copy_message()
+                except FloodWait as error:
+                    await asyncio.sleep(error.value)
+                    sent_msg = await copy_message()
+                except Exception:
+                    if not is_media or copy_kwargs.get("caption") == original_caption:
+                        raise
+                    logger.warning(
+                        "Retrying direct batch item with its original caption",
+                        exc_info=True,
+                    )
+                    copy_kwargs["caption"] = original_caption
+                    sent_msg = await copy_message()
+                sent_count += 1
+                if is_media:
+                    await _schedule_batch_delete(recipient_id, sent_msg)
+            except Exception:
+                failed_count += 1
+                logger.warning("Could not send direct batch item", exc_info=True)
+            await asyncio.sleep(1)
+    except Exception:
+        logger.warning("Could not read direct batch source %s", chat_id, exc_info=True)
+        await sts.edit("I could not read the source channel for this batch.")
+        return
+
+    if failed_count:
+        await sts.edit(
+            f"Sent {sent_count} message(s). {failed_count} message(s) could not be sent."
+        )
+    elif sent_count:
+        await sts.delete()
+    else:
+        await sts.edit("No messages were found in this batch.")
+
+
 @Client.on_message(filters.command("start") & filters.incoming)
 @handle_database_errors
 async def start(client, message):
@@ -102,112 +284,38 @@ async def start(client, message):
         )
         return
 
-    kk, file_id = message.command[1].split("_", 1) if "_" in message.command[1] else (False, False)
-    if not file_id:
-        file_id = message.command[1]
+    data = message.command[1]
+    if data.startswith(("BATCH-", "DSTORE-")):
+        # URL-safe base64 can itself contain underscores.  Keep batch
+        # payloads intact for force-subscribe retries.
+        kk, file_id = False, data
+    else:
+        kk, file_id = data.split("_", 1) if "_" in data else (False, False)
+        if not file_id:
+            file_id = data
     pre = ('checksubp' if kk == 'filep' else 'checksub') if kk else 'checksub'
  
     status = await ForceSub(client, message, file_id=file_id, mode=pre)
     if not status:
         return
 
-    data = message.command[1]
     if not file_id:
         file_id = data
 
     if data.split("-", 1)[0] == "BATCH":
-        sts = await message.reply("Please wait")
-        file_id = data.split("-", 1)[1]
-        msgs = BATCH_FILES.get(file_id)
-        if not msgs:
-            post = await client.get_messages(LOG_CHANNEL, int(file_id))
-            file = await client.download_media(post.document)
-            try:
-                loop = asyncio.get_running_loop()
-                msgs = await loop.run_in_executor(None, _load_downloaded_batch, file)
-            except (OSError, json.JSONDecodeError, TypeError):
-                await message.reply("Invalid Link!")
-                return
-            BATCH_FILES[file_id] = msgs
-        for msg in msgs:
-            title = msg.get("title")
-            size=get_size(int(msg.get("size", 0)))
-            f_caption=msg.get("caption", "")
-            if BATCH_FILE_CAPTION:
-                try:
-                    f_caption=BATCH_FILE_CAPTION.format(file_name= '' if title is None else title, file_size='' if size is None else size, file_caption='' if f_caption is None else f_caption)
-                except Exception as e:
-                    logger.exception(e)
-                    f_caption=f_caption
-            if f_caption is None:
-                f_caption = f"{title}"
-            try:
-                sent_msg = await client.send_cached_media(
-                    chat_id=message.from_user.id,
-                    file_id=msg.get("file_id"),
-                    caption=f_caption,
-                    protect_content=msg.get('protect', False),
-                    )
-                await schedule_auto_delete(message.from_user.id, sent_msg.id)
-            except FloodWait as e:
-                await asyncio.sleep(e.value)
-                logger.warning(f"Floodwait of {e.value} sec.")
-                sent_msg = await client.send_cached_media(
-                    chat_id=message.from_user.id,
-                    file_id=msg.get("file_id"),
-                    caption=f_caption,
-                    protect_content=msg.get('protect', False),
-                    )
-                await schedule_auto_delete(message.from_user.id, sent_msg.id)
-            except Exception as e:
-                logger.warning(e, exc_info=True)
-                continue
-            await asyncio.sleep(1) 
-        await sts.delete()
-        return
+        return await deliver_saved_batch(
+            client,
+            message,
+            data.split("-", 1)[1],
+            recipient_id=message.from_user.id,
+        )
     elif data.split("-", 1)[0] == "DSTORE":
-        sts = await message.reply("Please wait")
-        b_string = data.split("-", 1)[1]
-        decoded = (base64.urlsafe_b64decode(b_string + "=" * (-len(b_string) % 4))).decode("ascii")
-        try:
-            f_msg_id, l_msg_id, f_chat_id, protect = decoded.split("_", 3)
-        except:
-            f_msg_id, l_msg_id, f_chat_id = decoded.split("_", 2)
-            protect = "/pbatch" if PROTECT_CONTENT else "batch"
-        async for msg in client.iter_messages(int(f_chat_id), int(l_msg_id), int(f_msg_id)):
-            if msg.media:
-                media = getattr(msg, msg.media.value)
-                if BATCH_FILE_CAPTION:
-                    try:
-                        f_caption=BATCH_FILE_CAPTION.format(file_name=getattr(media, 'file_name', ''), file_size=getattr(media, 'file_size', ''), file_caption=getattr(msg, 'caption', ''))
-                    except Exception as e:
-                        logger.exception(e)
-                        f_caption = getattr(msg, 'caption', '')
-                else:
-                    media = getattr(msg, msg.media.value)
-                    file_name = getattr(media, 'file_name', '')
-                    f_caption = getattr(msg, 'caption', file_name)
-                try:
-                    await msg.copy(message.chat.id, caption=f_caption, protect_content=True if protect == "/pbatch" else False)
-                except FloodWait as e:
-                    await asyncio.sleep(e.value)
-                    await msg.copy(message.chat.id, caption=f_caption, protect_content=True if protect == "/pbatch" else False)
-                except Exception as e:
-                    logger.exception(e)
-                    continue
-            elif msg.empty:
-                continue
-            else:
-                try:
-                    await msg.copy(message.chat.id, protect_content=True if protect == "/pbatch" else False)
-                except FloodWait as e:
-                    await asyncio.sleep(e.value)
-                    await msg.copy(message.chat.id, protect_content=True if protect == "/pbatch" else False)
-                except Exception as e:
-                    logger.exception(e)
-                    continue
-            await asyncio.sleep(1) 
-        return await sts.delete()
+        return await deliver_direct_store_batch(
+            client,
+            message,
+            data.split("-", 1)[1],
+            recipient_id=message.from_user.id,
+        )
         
 
     pre = 'file'

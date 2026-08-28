@@ -228,15 +228,19 @@ class Bot(Client):
                 for message in app.iter_messages("pyrogram", 1, 15000):
                     print(message.text)
         """
-        current = offset
-        while True:
-            new_diff = min(200, limit - current)
-            if new_diff <= 0:
-                return
-            messages = await self.get_messages(chat_id, list(range(current, current+new_diff+1)))
+        # Telegram accepts at most 200 message IDs in one request.  The old
+        # inclusive range requested 201 IDs and also started at the invalid ID
+        # 0 when no offset was supplied.
+        current = max(1, offset)
+        while current <= limit:
+            batch_end = min(current + 199, limit)
+            messages = await self.get_messages(
+                chat_id,
+                list(range(current, batch_end + 1)),
+            )
             for message in messages:
                 yield message
-                current += 1
+            current = batch_end + 1
 
 
 app = Bot()
