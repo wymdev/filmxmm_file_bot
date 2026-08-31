@@ -64,7 +64,14 @@ async def save_file(media):
 
 
 
-async def get_search_results(query, file_type=None, max_results=10, offset=0, filter=False):
+async def get_search_results(
+    query,
+    file_type=None,
+    max_results=10,
+    offset=0,
+    filter=False,
+    include_caption=False,
+):
     """For given query return (results, next_offset)"""
 
     query = query.strip()
@@ -73,18 +80,22 @@ async def get_search_results(query, file_type=None, max_results=10, offset=0, fi
         #query = query.replace(' ', r'(\s|\.|\+|\-|_)')
         #raw_pattern = r'(\s|_|\-|\.|\+)' + query + r'(\s|_|\-|\.|\+)'
     if not query:
-        raw_pattern = '.'
+        raw_pattern = None
     elif ' ' not in query:
         raw_pattern = r'(\b|[\.\+\-_])' + query + r'(\b|[\.\+\-_])'
     else:
         raw_pattern = query.replace(' ', r'.*[\s\.\+\-_]')
     
     try:
-        regex = re.compile(raw_pattern, flags=re.IGNORECASE)
-    except:
+        regex = re.compile(raw_pattern, flags=re.IGNORECASE) if raw_pattern else None
+    except re.error:
         return []
 
-    if USE_CAPTION_FILTER:
+    if regex is None:
+        # An empty browse query means every indexed record, including Telegram
+        # videos that do not have a file_name.
+        filter = {}
+    elif USE_CAPTION_FILTER or include_caption:
         filter = {'$or': [{'file_name': regex}, {'caption': regex}]}
     else:
         filter = {'file_name': regex}

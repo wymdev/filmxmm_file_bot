@@ -1,6 +1,6 @@
 (() => {
   const tg = window.Telegram?.WebApp;
-  const state = { view: "home", movies: [], selected: null, session: null, query: "" };
+  const state = { view: "home", movies: [], selected: null, session: null, query: "", nextOffset: null };
   const $ = (selector) => document.querySelector(selector);
   const grid = $("#movie-grid");
   const loading = $("#loading");
@@ -70,19 +70,24 @@
     return article;
   }
 
-  function renderMovies(movies) {
-    grid.replaceChildren(...movies.map(createCard));
-    empty.hidden = movies.length > 0;
-    $("#result-count").textContent = movies.length ? `${movies.length} titles` : "";
+  function renderMovies(movies, append = false) {
+    const cards = movies.map(createCard);
+    if (append) grid.append(...cards); else grid.replaceChildren(...cards);
+    empty.hidden = state.movies.length > 0;
+    $("#result-count").textContent = state.movies.length ? `${state.movies.length} titles` : "";
+    $("#load-more").hidden = state.nextOffset === null;
   }
 
-  async function loadMovies(query = "") {
+  async function loadMovies(query = "", append = false) {
     setLoading(true);
     try {
-      const result = await api(`/api/movies?q=${encodeURIComponent(query)}`);
-      state.movies = result.movies;
-      renderMovies(state.movies);
+      const offset = append && state.nextOffset !== null ? state.nextOffset : 0;
+      const result = await api(`/api/movies?q=${encodeURIComponent(query)}&offset=${offset}`);
+      state.nextOffset = result.next_offset === "" ? null : Number(result.next_offset);
+      state.movies = append ? [...state.movies, ...result.movies] : result.movies;
+      renderMovies(result.movies, append);
     } catch (error) {
+      state.nextOffset = null;
       renderMovies([]);
       empty.querySelector("h3").textContent = tg?.initData ? "Couldn’t load movies · ရုပ်ရှင်များကို ဖွင့်မရပါ" : "Open inside Telegram · Telegram တွင် ဖွင့်ပါ";
       empty.querySelector("p").textContent = tg?.initData ? error.message : "Launch this Mini App from the FilmX bot. · FilmX bot မှတစ်ဆင့် ဤ Mini App ကို ဖွင့်ပါ။";
@@ -95,6 +100,7 @@
     setLoading(true);
     try {
       const result = await api(`/api/${kind}`);
+      state.nextOffset = null;
       state.movies = result.movies;
       renderMovies(state.movies);
     } catch (error) {
@@ -224,6 +230,7 @@
     $("#search-form").classList.remove("has-value");
     loadMovies();
   });
+  $("#load-more").addEventListener("click", () => loadMovies(state.query, true));
   document.querySelectorAll(".bottom-nav button").forEach((button) => button.addEventListener("click", () => switchView(button.dataset.view)));
   document.querySelectorAll("[data-close]").forEach((button) => button.addEventListener("click", () => document.getElementById(button.dataset.close).close()));
   $("#get-movie").addEventListener("click", requestMovie);

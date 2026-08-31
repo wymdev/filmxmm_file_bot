@@ -1,7 +1,9 @@
 import hashlib
 import hmac
+import html
 import json
 import logging
+import re
 import time
 from pathlib import Path
 from urllib.parse import parse_qsl
@@ -84,7 +86,15 @@ async def telegram_auth(request, handler):
 
 
 def _movie_json(movie, favorite_ids=()):
-    name = movie.file_name or "Untitled movie"
+    name = (movie.file_name or "").strip()
+    if not name:
+        plain_caption = html.unescape(
+            re.sub(r"<[^>]+>", "", movie.caption or "")
+        ).strip()
+        name = next(
+            (line.strip() for line in plain_caption.splitlines() if line.strip()),
+            "Untitled Movie · အမည်မရှိသောရုပ်ရှင်",
+        )[:160]
     lowered = name.lower()
     quality = next(
         (label for label in ("2160p", "1080p", "720p", "480p") if label in lowered),
@@ -146,6 +156,7 @@ async def movies_handler(request):
         max_results=24,
         offset=offset,
         filter=True,
+        include_caption=True,
     )
     return web.json_response(
         {

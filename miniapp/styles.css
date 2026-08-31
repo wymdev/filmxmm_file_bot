@@ -65,6 +65,8 @@ main { padding: 0 20px; }
 #result-count { color: var(--muted); font-size: 11px; }
 
 .movie-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px 12px; }
+.load-more { display: block; width: 100%; min-height: 48px; margin: 28px 0 4px; border: 1px solid var(--border); background: transparent; color: var(--text); font-size: 12px; font-weight: 700; }
+.load-more[hidden] { display: none; }
 .movie-card { position: relative; min-width: 0; cursor: pointer; }
 .poster { position: relative; display: flex; aspect-ratio: 2 / 2.8; align-items: flex-end; overflow: hidden; padding: 14px; background: linear-gradient(145deg, color-mix(in srgb, var(--accent) 34%, #16161c), #111117 58%, color-mix(in srgb, var(--accent) 8%, #08080b)); }
 .poster::before { content: ""; position: absolute; inset: 12% -40% auto auto; width: 120%; aspect-ratio: 1; border: 1px solid color-mix(in srgb, var(--accent) 32%, transparent); border-radius: 50%; }

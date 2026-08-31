@@ -16,7 +16,7 @@ os.environ.setdefault("DATABASE_URI", "mongodb://localhost")
 os.environ.setdefault("ADMINS", "123456")
 os.environ.setdefault("LOG_CHANNEL", "-100123456")
 
-from miniapp_server import create_miniapp, validate_init_data
+from miniapp_server import _movie_json, create_miniapp, validate_init_data
 
 
 TOKEN = "123456:test-token"
@@ -50,6 +50,35 @@ class MiniAppAuthenticationTests(unittest.TestCase):
     def test_expired_init_data_is_rejected(self):
         with self.assertRaisesRegex(ValueError, "Expired"):
             validate_init_data(signed_init_data(), TOKEN, now=NOW + 90_000)
+
+
+class MovieSerializationTests(unittest.TestCase):
+    def test_caption_is_used_when_telegram_video_has_no_filename(self):
+        movie = SimpleNamespace(
+            id="movie-id",
+            file_name="",
+            file_type="video",
+            file_size=100,
+            caption="<b>Example Movie (2026)</b>\n1080p",
+        )
+
+        result = _movie_json(movie)
+
+        self.assertEqual(result["title"], "Example Movie (2026)")
+
+    def test_untitled_fallback_is_bilingual(self):
+        movie = SimpleNamespace(
+            id="movie-id",
+            file_name=None,
+            file_type="video",
+            file_size=100,
+            caption=None,
+        )
+
+        result = _movie_json(movie)
+
+        self.assertIn("Untitled Movie", result["title"])
+        self.assertIn("ရုပ်ရှင်", result["title"])
 
 
 class MiniAppHttpTests(unittest.IsolatedAsyncioTestCase):
