@@ -11,6 +11,7 @@ from database.filters_mdb import(
 from database.connections_mdb import active_connection
 from utils import get_file_id, parser, split_quotes
 from info import ADMINS
+from translations import BOT_NOT_IN_GROUP, NOT_CONNECTED, bilingual
 
 
 @Client.on_message(filters.command(['filter', 'add']) & filters.incoming)
@@ -29,10 +30,10 @@ async def addfilter(client, message):
                 chat = await client.get_chat(grpid)
                 title = chat.title
             except:
-                await message.reply_text("Make sure I'm present in your group!!", quote=True)
+                await message.reply_text(BOT_NOT_IN_GROUP, quote=True)
                 return
         else:
-            await message.reply_text("I'm not connected to any groups!", quote=True)
+            await message.reply_text(NOT_CONNECTED, quote=True)
             return
 
     elif chat_type in [enums.ChatType.GROUP, enums.ChatType.SUPERGROUP]:
@@ -52,21 +53,30 @@ async def addfilter(client, message):
 
 
     if len(args) < 2:
-        await message.reply_text("Command Incomplete :(", quote=True)
+        await message.reply_text(bilingual(
+            "The command is incomplete. Check /help and try again.",
+            "Command မပြည့်စုံပါ။ /help ကိုကြည့်ပြီး ထပ်မံကြိုးစားပါ။",
+        ), quote=True)
         return
 
     extracted = split_quotes(args[1])
     text = extracted[0].lower()
 
     if not message.reply_to_message and len(extracted) < 2:
-        await message.reply_text("Add some content to save your filter!", quote=True)
+        await message.reply_text(bilingual(
+            "Add text or media to save this filter.",
+            "ဤ filter ကို သိမ်းရန် စာသား သို့မဟုတ် media ထည့်ပါ။",
+        ), quote=True)
         return
 
     if (len(extracted) >= 2) and not message.reply_to_message:
         reply_text, btn, alert = parser(extracted[1], text)
         fileid = None
         if not reply_text:
-            await message.reply_text("You cannot have buttons alone, give some text to go with it!", quote=True)
+            await message.reply_text(bilingual(
+                "Buttons need accompanying text or media.",
+                "Button များကို စာသား သို့မဟုတ် media နှင့်အတူ ထည့်ပေးပါ။",
+            ), quote=True)
             return
 
     elif message.reply_to_message and message.reply_to_message.reply_markup:
@@ -131,10 +141,10 @@ async def get_all(client, message):
                 chat = await client.get_chat(grpid)
                 title = chat.title
             except:
-                await message.reply_text("Make sure I'm present in your group!!", quote=True)
+                await message.reply_text(BOT_NOT_IN_GROUP, quote=True)
                 return
         else:
-            await message.reply_text("I'm not connected to any groups!", quote=True)
+            await message.reply_text(NOT_CONNECTED, quote=True)
             return
 
     elif chat_type in [enums.ChatType.GROUP, enums.ChatType.SUPERGROUP]:
@@ -193,10 +203,10 @@ async def deletefilter(client, message):
             try:
                 await client.get_chat(grpid)
             except:
-                await message.reply_text("Make sure I'm present in your group!!", quote=True)
+                await message.reply_text(BOT_NOT_IN_GROUP, quote=True)
                 return
         else:
-            await message.reply_text("I'm not connected to any groups!", quote=True)
+            await message.reply_text(NOT_CONNECTED, quote=True)
             return
 
     elif chat_type in [enums.ChatType.GROUP, enums.ChatType.SUPERGROUP]:
@@ -244,10 +254,10 @@ async def delallconfirm(client, message):
                 chat = await client.get_chat(grpid)
                 title = chat.title
             except:
-                await message.reply_text("Make sure I'm present in your group!!", quote=True)
+                await message.reply_text(BOT_NOT_IN_GROUP, quote=True)
                 return
         else:
-            await message.reply_text("I'm not connected to any groups!", quote=True)
+            await message.reply_text(NOT_CONNECTED, quote=True)
             return
 
     elif chat_type in [enums.ChatType.GROUP, enums.ChatType.SUPERGROUP]:

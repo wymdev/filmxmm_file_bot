@@ -24,6 +24,8 @@ from database.ia_filterdb import Media
 from database.mongo import RETRYABLE_MONGO_ERRORS, retry_mongo_operation
 from database.users_chats_db import db
 from database.auto_delete_db import ensure_auto_delete_indexes, get_expired_messages, remove_entry
+from database.pending_requests import ensure_pending_request_indexes
+from database.miniapp_db import ensure_miniapp_indexes
 from info import SESSION, API_ID, API_HASH, BOT_TOKEN, LOG_STR
 from utils import temp
 from typing import Union, Optional, AsyncGenerator
@@ -65,6 +67,9 @@ class Bot(Client):
         logging.info(f"{me.first_name} with for Pyrogram v{__version__} (Layer {layer}) started on {me.username}.")
         logging.info(LOG_STR)
 
+        from miniapp_server import start_miniapp_server
+        self._miniapp_runner = await start_miniapp_server(self)
+
         # Keep persisted maintenance state current for long-running processes.
         self._auto_delete_task = asyncio.create_task(
             self._auto_delete_loop(),
@@ -88,6 +93,18 @@ class Bot(Client):
                 except Exception:
                     logging.exception("Failed to resolve configured channel %s", channel_id)
 
+        from info import MINI_APP_URL
+        if MINI_APP_URL:
+            try:
+                await self.set_chat_menu_button(
+                    menu_button=types.MenuButtonWebApp(
+                        text="FilmX · ရုပ်ရှင်",
+                        web_app=types.WebAppInfo(url=MINI_APP_URL),
+                    )
+                )
+            except Exception:
+                logging.exception("Failed to configure the Mini App menu button")
+
     async def stop(self, *args):
         tasks = [
             getattr(self, '_auto_delete_task', None),
@@ -99,6 +116,9 @@ class Bot(Client):
         for task in filter(None, tasks):
             with suppress(asyncio.CancelledError):
                 await task
+        runner = getattr(self, '_miniapp_runner', None)
+        if runner:
+            await runner.cleanup()
         await super().stop(*args)
         logging.info("Bot stopped. Bye.")
 
@@ -129,6 +149,8 @@ class Bot(Client):
                     Media.ensure_indexes,
                 )
                 await ensure_auto_delete_indexes()
+                await ensure_pending_request_indexes()
+                await ensure_miniapp_indexes()
             except RETRYABLE_MONGO_ERRORS as error:
                 logging.warning(
                     "MongoDB indexes are not ready; retrying in 5 minutes: %s",
@@ -183,7 +205,11 @@ class Bot(Client):
                                     "The file you requested has been <b>automatically deleted</b> "
                                     "due to <b>DMCA / Copyright</b> compliance.\n\n"
                                     "📌 <i>If you need the file again, please request it once more from the channel.</i>\n\n"
-                                    "🔒 <b>Note:</b> All files are auto-deleted after 5 hours to comply with copyright regulations."
+                                    "🔒 <b>Note:</b> All files are auto-deleted after 5 hours to comply with copyright regulations.\n\n"
+                                    "<b>🇲🇲 မူပိုင်ခွင့် သတိပေးချက်</b>\n\n"
+                                    "သင်တောင်းဆိုထားသောဖိုင်ကို မူပိုင်ခွင့်စည်းမျဉ်းများအရ အလိုအလျောက် ဖျက်ပြီးပါပြီ။\n\n"
+                                    "📌 ဖိုင်လိုအပ်ပါက ချန်နယ်မှ ထပ်မံတောင်းဆိုပါ။\n\n"
+                                    "🔒 <b>မှတ်ချက်:</b> မူပိုင်ခွင့်စည်းမျဉ်းများအရ ဖိုင်အားလုံးကို ၅ နာရီအကြာတွင် အလိုအလျောက် ဖျက်ပါသည်။"
                                 ),
                                 parse_mode=enums.ParseMode.HTML
                             )

@@ -15,6 +15,7 @@ os.environ.setdefault("LOG_CHANNEL", "-100123456")
 
 from bot import Bot
 from plugins import commands
+from translations import BATCH_INVALID
 from plugins.genlink import (
     PENDING_BATCHES,
     batch_requester_id,
@@ -295,9 +296,7 @@ class BatchDeliveryTests(unittest.IsolatedAsyncioTestCase):
             "123",
         )
 
-        status.edit.assert_awaited_once_with(
-            "This batch link is invalid or has expired."
-        )
+        status.edit.assert_awaited_once_with(BATCH_INVALID)
 
     async def test_custom_caption_failure_retries_original_caption(self):
         commands.BATCH_FILES["123"] = [

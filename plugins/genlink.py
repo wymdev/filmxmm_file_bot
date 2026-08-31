@@ -7,6 +7,7 @@ from pyrogram import filters, Client, enums
 from pyrogram.errors.exceptions.bad_request_400 import ChannelInvalid, UsernameInvalid, UsernameNotModified
 from info import ADMINS, LOG_CHANNEL, FILE_STORE_CHANNEL, PUBLIC_FILE_STORE
 from utils import temp
+from translations import BATCH_INVALID, GENERIC_ERROR, bilingual
 import base64
 
 logger = logging.getLogger(__name__)
@@ -65,7 +66,10 @@ def batch_requester_id(message):
 async def publish_batch(bot, message, status, files):
     """Store a batch manifest and edit the status with its deep link."""
     if not files:
-        return await status.edit("No media files were found for this batch.")
+        return await status.edit(bilingual(
+            "No media files were found for this batch.",
+            "ဤ batch အတွက် media ဖိုင်များ မတွေ့ပါ။",
+        ))
     batch_file = io.BytesIO(json.dumps(files).encode("utf-8"))
     batch_file.name = f"batchmode_{batch_requester_id(message)}.json"
     post = await bot.send_document(
@@ -131,10 +135,16 @@ async def collect_forwarded_batch(_, message):
 async def gen_link_s(bot, message):
     replied = message.reply_to_message
     if not replied:
-        return await message.reply('Reply to a message to get a shareable link.')
+        return await message.reply(bilingual(
+            "Reply to a message to create a shareable link.",
+            "မျှဝေနိုင်သောလင့်ခ် ဖန်တီးရန် မက်ဆေ့ချ်တစ်ခုကို reply လုပ်ပါ။",
+        ))
     file_type = replied.media
     if file_type not in [enums.MessageMediaType.VIDEO, enums.MessageMediaType.AUDIO, enums.MessageMediaType.DOCUMENT]:
-        return await message.reply("Reply to a supported media")
+        return await message.reply(bilingual(
+            "Reply to a supported video, audio, or document.",
+            "ပံ့ပိုးထားသော video၊ audio သို့မဟုတ် document ကို reply လုပ်ပါ။",
+        ))
     if message.has_protected_content and (
         not message.from_user or message.from_user.id not in ADMINS
     ):
@@ -147,7 +157,10 @@ async def gen_link_s(bot, message):
     
     file_doc = await Media.find_one({'file_unique_id': media.file_unique_id})
     if not file_doc:
-        return await message.reply("Failed to get file from database.")
+        return await message.reply(bilingual(
+            "The file could not be loaded from the database.",
+            "ဖိုင်ကို ဒေတာဘေ့စ်မှ ရယူ၍ မရပါ။",
+        ))
         
     string = 'filep_' if message.text.lower().strip() == "/plink" else 'file_'
     string += str(file_doc.id)
@@ -166,30 +179,33 @@ async def gen_link_batch(bot, message):
         requester_id = batch_requester_id(message)
         pending = PENDING_BATCHES.get(requester_id, [])
         if not pending:
-            return await message.reply(
-                "Nothing is queued. Forward media files to me and then send /batch, "
-                "or use <code>/batch link1 link2 link3</code>.\n\n"
-                "With exactly two links from the same chat, every post between "
-                "those links is included."
-            )
+            return await message.reply(bilingual(
+                "Nothing is queued. Forward media files and then send /batch, or use "
+                "<code>/batch link1 link2 link3</code>. Exactly two links from the same "
+                "chat include every post between them.",
+                "စောင့်ဆိုင်းနေသောဖိုင် မရှိပါ။ Media ဖိုင်များကို forward လုပ်ပြီး /batch ပို့ပါ၊ "
+                "သို့မဟုတ် <code>/batch link1 link2 link3</code> ကိုသုံးပါ။ Chat တစ်ခုတည်းမှ "
+                "လင့်ခ်နှစ်ခုသာ ပေးပါက ကြားရှိ post အားလုံး ပါဝင်ပါမည်။",
+            ))
         status = await message.reply(f"Creating a batch from {len(pending)} forwarded file(s)…")
         files = [{**item, "protect": protect_batch} for item in pending]
         try:
             await publish_batch(bot, message, status, files)
         except Exception:
             logger.exception("Could not publish forwarded batch")
-            return await status.edit("I could not create the batch. Please try again.")
+            return await status.edit(GENERIC_ERROR)
         PENDING_BATCHES.pop(requester_id, None)
         return
 
     try:
         requested = [parse_batch_link(link) for link in link_texts]
     except ValueError:
-        return await message.reply(
+        return await message.reply(bilingual(
             "One or more links are invalid. Use Telegram post links like:\n"
             "<code>/batch https://t.me/channel/10 https://t.me/channel/15 "
-            "https://t.me/channel/22</code>"
-        )
+            "https://t.me/channel/22</code>",
+            "လင့်ခ်တစ်ခု သို့မဟုတ် အများအပြား မမှန်ကန်ပါ။ အထက်ပါပုံစံအတိုင်း Telegram post လင့်ခ်များကို သုံးပါ။",
+        ))
 
     resolved_chats = {}
     resolved = []
@@ -200,11 +216,12 @@ async def gen_link_batch(bot, message):
                 resolved_chats[cache_key] = (await bot.get_chat(source_chat)).id
             resolved.append((resolved_chats[cache_key], message_id))
     except ChannelInvalid:
-        return await message.reply(
-            "I cannot access one of those private chats. Add me there as an admin first."
-        )
+        return await message.reply(bilingual(
+            "I cannot access one of those private chats. Add the bot there as an admin first.",
+            "Private chat တစ်ခုကို ဝင်ရောက်၍ မရပါ။ Bot ကို ထို chat တွင် admin အဖြစ် အရင်ထည့်ပါ။",
+        ))
     except (UsernameInvalid, UsernameNotModified):
-        return await message.reply("One of the Telegram links is invalid.")
+        return await message.reply(BATCH_INVALID)
     except Exception as error:
         logger.warning("Could not resolve batch source", exc_info=True)
         return await message.reply(f"I could not access one of those links: {error}")
@@ -213,9 +230,10 @@ async def gen_link_batch(bot, message):
     # an inclusive range. One link, three or more links, or links from
     # different chats select only those exact posts.
     is_range = len(resolved) == 2 and resolved[0][0] == resolved[1][0]
-    status = await message.reply(
-        "Generating your batch link. This may take time for a large range."
-    )
+    status = await message.reply(bilingual(
+        "Generating your batch link. A large range may take some time.",
+        "Batch လင့်ခ်ကို ဖန်တီးနေပါသည်။ ဖိုင်အများအပြားရှိပါက အချိန်အနည်းငယ် ကြာနိုင်ပါသည်။",
+    ))
 
     if is_range:
         chat_id = resolved[0][0]
@@ -240,12 +258,16 @@ async def gen_link_batch(bot, message):
         except Exception:
             logger.exception("Could not read batch message range")
             return await status.edit(
-                "I could not read that message range. Check my access to the source chat."
+                bilingual(
+                    "I could not read that message range. Check the bot's access to the source chat.",
+                    "ထိုမက်ဆေ့ချ်အပိုင်းကို ဖတ်၍မရပါ။ မူရင်း chat သို့ bot ဝင်ရောက်ခွင့် ရှိကြောင်း စစ်ဆေးပါ။",
+                )
             )
         if not outlist:
-            return await status.edit(
-                f"No media files were found in the {total}-message range."
-            )
+            return await status.edit(bilingual(
+                f"No media files were found in the {total}-message range.",
+                f"မက်ဆေ့ချ် {total} ခုအတွင်း media ဖိုင် မတွေ့ပါ။",
+            ))
     else:
         outlist = []
         for chat_id, message_id in resolved:
@@ -262,12 +284,13 @@ async def gen_link_batch(bot, message):
                     exc_info=True,
                 )
         if not outlist:
-            return await status.edit(
-                "None of the selected links contains accessible media."
-            )
+            return await status.edit(bilingual(
+                "None of the selected links contains accessible media.",
+                "ရွေးချယ်ထားသောလင့်ခ်များတွင် ရယူနိုင်သည့် media မရှိပါ။",
+            ))
 
     try:
         await publish_batch(bot, message, status, outlist)
     except Exception:
         logger.exception("Could not publish linked-message batch")
-        await status.edit("I could not create the batch. Please try again.")
+        await status.edit(GENERIC_ERROR)

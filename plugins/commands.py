@@ -7,21 +7,65 @@ from functools import wraps
 from Script import script
 from pyrogram import Client, filters, enums
 from pyrogram.errors import FloodWait
-from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from database.ia_filterdb import Media, get_file_details
 from database.users_chats_db import db
 from database.auto_delete_db import schedule_auto_delete
 from database.mongo import RETRYABLE_MONGO_ERRORS
-from info import CHANNELS, ADMINS, LOG_CHANNEL, PICS, BATCH_FILE_CAPTION, CUSTOM_FILE_CAPTION, PROTECT_CONTENT
+from info import CHANNELS, ADMINS, LOG_CHANNEL, PICS, BATCH_FILE_CAPTION, CUSTOM_FILE_CAPTION, PROTECT_CONTENT, MINI_APP_URL, REQUIRED_CHANNEL_URL
 from utils import get_settings, get_size, save_group_settings, temp
 from database.connections_mdb import active_connection
 from plugins.fsub import ForceSub
+from translations import (
+    BATCH_EMPTY,
+    BATCH_INVALID,
+    BOT_NOT_IN_GROUP,
+    DATABASE_UNAVAILABLE,
+    DELETE_ALL_CONFIRM,
+    DELETE_REPLY_REQUIRED,
+    FILE_DELETED,
+    FILE_NOT_IN_DATABASE,
+    FILES_DELETED,
+    NO_MESSAGES,
+    NO_INPUT,
+    NO_SUCH_FILE,
+    NOT_CONNECTED,
+    PREPARING_FILES,
+    PROCESSING,
+    SOURCE_UNAVAILABLE,
+    UNSUPPORTED_FILE,
+    bilingual,
+)
 import re
 import json
 import base64
 logger = logging.getLogger(__name__)
 
 BATCH_FILES = {}
+
+
+def home_buttons():
+    buttons = []
+    if MINI_APP_URL:
+        buttons.append(
+            [
+                InlineKeyboardButton(
+                    "🎬 Open Movie App · ရုပ်ရှင် App",
+                    web_app=WebAppInfo(url=MINI_APP_URL),
+                )
+            ]
+        )
+    buttons.append(
+        [
+            InlineKeyboardButton('🔎 Search · ရှာရန်', switch_inline_query_current_chat=''),
+            InlineKeyboardButton(
+                '📢 Channel · ချန်နယ်',
+                url=REQUIRED_CHANNEL_URL or 'https://t.me/filmxhub20',
+            ),
+        ]
+    )
+    buttons.append([InlineKeyboardButton('About · အကြောင်း', callback_data='about')])
+    return buttons
 
 
 def handle_database_errors(handler):
@@ -31,9 +75,7 @@ def handle_database_errors(handler):
             return await handler(client, message)
         except RETRYABLE_MONGO_ERRORS as error:
             logger.warning("MongoDB unavailable during /start: %s", error)
-            return await message.reply(
-                "The database is temporarily unavailable. Please try again in a few minutes."
-            )
+            return await message.reply(DATABASE_UNAVAILABLE)
 
     return wrapped
 
@@ -65,7 +107,7 @@ async def _schedule_batch_delete(chat_id, sent_message):
 async def deliver_saved_batch(client, message, file_id, recipient_id=None):
     """Download and deliver a JSON-backed batch link."""
     recipient_id = recipient_id or message.chat.id
-    sts = await client.send_message(recipient_id, "Preparing your files…")
+    sts = await client.send_message(recipient_id, PREPARING_FILES)
     msgs = BATCH_FILES.get(file_id)
     if msgs is None:
         try:
@@ -81,8 +123,8 @@ async def deliver_saved_batch(client, message, file_id, recipient_id=None):
                 raise ValueError("Invalid batch document")
         except Exception:
             logger.warning("Could not load batch %s", file_id, exc_info=True)
-            await sts.edit("This batch link is invalid or has expired.")
-            return
+            await sts.edit(BATCH_INVALID)
+            return False
         BATCH_FILES[file_id] = msgs
 
     sent_count = 0
@@ -135,19 +177,21 @@ async def deliver_saved_batch(client, message, file_id, recipient_id=None):
         await asyncio.sleep(1)
 
     if failed_count:
-        await sts.edit(
-            f"Sent {sent_count} file(s). {failed_count} file(s) could not be sent."
-        )
+        await sts.edit(bilingual(
+            f"Sent {sent_count} file(s). {failed_count} file(s) could not be sent.",
+            f"ဖိုင် {sent_count} ခု ပို့ပြီးပါပြီ။ ဖိုင် {failed_count} ခုကို ပို့၍မရပါ။",
+        ))
     elif sent_count:
         await sts.delete()
     else:
-        await sts.edit("This batch does not contain any files.")
+        await sts.edit(BATCH_EMPTY)
+    return sent_count > 0
 
 
 async def deliver_direct_store_batch(client, message, encoded_data, recipient_id=None):
     """Deliver a direct-store batch payload and report malformed links."""
     recipient_id = recipient_id or message.chat.id
-    sts = await client.send_message(recipient_id, "Preparing your files…")
+    sts = await client.send_message(recipient_id, PREPARING_FILES)
     try:
         decoded = base64.urlsafe_b64decode(
             encoded_data + "=" * (-len(encoded_data) % 4)
@@ -160,8 +204,8 @@ async def deliver_direct_store_batch(client, message, encoded_data, recipient_id
         first_id, last_id, chat_id = int(first_id), int(last_id), int(chat_id)
         first_id, last_id = sorted((first_id, last_id))
     except (ValueError, UnicodeError):
-        await sts.edit("This batch link is invalid or has expired.")
-        return
+        await sts.edit(BATCH_INVALID)
+        return False
 
     sent_count = 0
     failed_count = 0
@@ -218,17 +262,93 @@ async def deliver_direct_store_batch(client, message, encoded_data, recipient_id
             await asyncio.sleep(1)
     except Exception:
         logger.warning("Could not read direct batch source %s", chat_id, exc_info=True)
-        await sts.edit("I could not read the source channel for this batch.")
-        return
+        await sts.edit(SOURCE_UNAVAILABLE)
+        return False
 
     if failed_count:
-        await sts.edit(
-            f"Sent {sent_count} message(s). {failed_count} message(s) could not be sent."
-        )
+        await sts.edit(bilingual(
+            f"Sent {sent_count} message(s). {failed_count} message(s) could not be sent.",
+            f"မက်ဆေ့ချ် {sent_count} ခု ပို့ပြီးပါပြီ။ မက်ဆေ့ချ် {failed_count} ခုကို ပို့၍မရပါ။",
+        ))
     elif sent_count:
         await sts.delete()
     else:
-        await sts.edit("No messages were found in this batch.")
+        await sts.edit(NO_MESSAGES)
+    return sent_count > 0
+
+
+async def deliver_single_file(client, request_id, recipient_id, protect=False):
+    """Resolve one stored-media request and deliver it to a Telegram user."""
+    file_id = request_id
+    files_ = await get_file_details(file_id)
+    if not files_:
+        try:
+            decoded = base64.urlsafe_b64decode(
+                request_id + "=" * (-len(request_id) % 4)
+            ).decode("ascii")
+            _, file_id = decoded.split("_", 1)
+        except Exception:
+            return False
+        files_ = await get_file_details(file_id)
+    if not files_:
+        return False
+
+    media = files_[0]
+    title = media.file_name
+    size = get_size(media.file_size)
+    caption = media.caption
+    if CUSTOM_FILE_CAPTION:
+        try:
+            caption = CUSTOM_FILE_CAPTION.format(
+                file_name="" if title in [None, "None"] else title,
+                file_size="" if size is None else size,
+                file_caption="" if caption is None else caption,
+            )
+        except Exception:
+            logger.warning("Could not format the custom file caption", exc_info=True)
+    if caption is None:
+        caption = title or ""
+
+    sent_msg = await client.send_cached_media(
+        chat_id=recipient_id,
+        file_id=media.file_id,
+        caption=caption,
+        protect_content=bool(protect),
+    )
+    try:
+        await schedule_auto_delete(recipient_id, sent_msg.id)
+    except Exception:
+        logger.warning(
+            "File delivered but auto-delete scheduling failed for message %s",
+            sent_msg.id,
+            exc_info=True,
+        )
+    return True
+
+
+async def deliver_movie_request(client, request_id, recipient_id, mode="checksub"):
+    """Single delivery entry point shared by deep links, joins, and Mini App."""
+    request_id = str(request_id)
+    if request_id.startswith("BATCH-"):
+        return await deliver_saved_batch(
+            client,
+            None,
+            request_id.split("-", 1)[1],
+            recipient_id=recipient_id,
+        )
+    if request_id.startswith("DSTORE-"):
+        return await deliver_direct_store_batch(
+            client,
+            None,
+            request_id.split("-", 1)[1],
+            recipient_id=recipient_id,
+        )
+    return await deliver_single_file(
+        client,
+        request_id,
+        recipient_id,
+        protect=mode in {"checksubp", "filep"},
+    )
 
 
 @Client.on_message(filters.command("start") & filters.incoming)
@@ -253,10 +373,7 @@ async def start(client, message):
         await db.add_user(message.from_user.id, message.from_user.first_name)
         await client.send_message(LOG_CHANNEL, script.LOG_TEXT_P.format(message.from_user.id, message.from_user.mention))
     if len(message.command) != 2:
-        buttons = [[
-            InlineKeyboardButton('♻️ Updates Channel ♻️', url='https://t.me/filmxhub20'),
-            InlineKeyboardButton('😊 About', callback_data='about')
-        ]]
+        buttons = home_buttons()
         reply_markup = InlineKeyboardMarkup(buttons)
         await message.reply_photo(
             photo=secrets.choice(PICS),
@@ -271,10 +388,7 @@ async def start(client, message):
             await ForceSub(client, message)
             return
 
-        buttons = [[
-            InlineKeyboardButton('♻️ Updates Channel ♻️', url='https://t.me/filmxhub20'),
-            InlineKeyboardButton('😊 About', callback_data='about')
-        ]]
+        buttons = home_buttons()
         reply_markup = InlineKeyboardMarkup(buttons)
         await message.reply_photo(
             photo=secrets.choice(PICS),
@@ -302,57 +416,18 @@ async def start(client, message):
     if not file_id:
         file_id = data
 
-    if data.split("-", 1)[0] == "BATCH":
-        return await deliver_saved_batch(
-            client,
-            message,
-            data.split("-", 1)[1],
-            recipient_id=message.from_user.id,
-        )
-    elif data.split("-", 1)[0] == "DSTORE":
-        return await deliver_direct_store_batch(
-            client,
-            message,
-            data.split("-", 1)[1],
-            recipient_id=message.from_user.id,
-        )
-        
-
-    pre = 'file'
-    files_ = await get_file_details(file_id)           
-    if not files_:
-        try:
-            pre, file_id = ((base64.urlsafe_b64decode(data + "=" * (-len(data) % 4))).decode("ascii")).split("_", 1)
-        except Exception:
-            return await message.reply('No such file exist.')
-        files_ = await get_file_details(file_id)
-        if not files_:
-            return await message.reply('No such file exist.')
-            
-    files = files_[0]
-    title = files.file_name
-    size=get_size(files.file_size)
-    f_caption=files.caption
-    if CUSTOM_FILE_CAPTION:
-        try:
-            f_caption=CUSTOM_FILE_CAPTION.format(file_name= '' if title in [None, "None"] else title, file_size='' if size is None else size, file_caption='' if f_caption is None else f_caption)
-        except Exception as e:
-            logger.exception(e)
-            f_caption=f_caption
-    if f_caption is None:
-        f_caption = f"{files.file_name}"
-        
     try:
-        sent_msg = await client.send_cached_media(
-            chat_id=message.from_user.id,
-            file_id=files.file_id,
-            caption=f_caption,
-            protect_content=True if pre == 'filep' else False,
-            )
-        await schedule_auto_delete(message.from_user.id, sent_msg.id)
-    except Exception as e:
-        logger.error(f"Error sending cached media: {e}")
-        return await message.reply('No such file exist.')
+        delivered = await deliver_movie_request(
+            client,
+            file_id,
+            message.from_user.id,
+            mode=pre,
+        )
+    except Exception:
+        logger.exception("Error delivering requested media")
+        return await message.reply(NO_SUCH_FILE)
+    if not delivered:
+        return await message.reply(NO_SUCH_FILE)
                     
 
 @Client.on_message(filters.command('channel') & filters.user(ADMINS))
@@ -397,9 +472,9 @@ async def delete(bot, message):
     """Delete file from database"""
     reply = message.reply_to_message
     if reply and reply.media:
-        msg = await message.reply("Processing...⏳", quote=True)
+        msg = await message.reply(PROCESSING, quote=True)
     else:
-        await message.reply('Reply to file with /delete which you want to delete', quote=True)
+        await message.reply(DELETE_REPLY_REQUIRED, quote=True)
         return
 
     for file_type in ("document", "video", "audio"):
@@ -407,7 +482,7 @@ async def delete(bot, message):
         if media is not None:
             break
     else:
-        await msg.edit('This is not supported file format')
+        await msg.edit(UNSUPPORTED_FILE)
         return
     
     file_unique_id = getattr(media, "file_unique_id", media.file_id)
@@ -416,7 +491,7 @@ async def delete(bot, message):
         'file_unique_id': file_unique_id,
     })
     if result.deleted_count:
-        await msg.edit('File is successfully deleted from database')
+        await msg.edit(FILE_DELETED)
     else:
         file_name = re.sub(r"(_|\-|\.|\+)", " ", str(media.file_name)) if media.file_name else ""
         result = await Media.collection.delete_many({
@@ -425,7 +500,7 @@ async def delete(bot, message):
             'mime_type': media.mime_type
             })
         if result.deleted_count:
-            await msg.edit('File is successfully deleted from database')
+            await msg.edit(FILE_DELETED)
         else:
             # files indexed before https://github.com/EvamariaTG/EvaMaria/commit/f3d2a1bcb155faf44178e5d7a685a1b533e714bf#diff-86b613edf1748372103e94cacff3b578b36b698ef9c16817bb98fe9ef22fb669R39 
             # have original file name.
@@ -435,15 +510,15 @@ async def delete(bot, message):
                 'mime_type': media.mime_type
             })
             if result.deleted_count:
-                await msg.edit('File is successfully deleted from database')
+                await msg.edit(FILE_DELETED)
             else:
-                await msg.edit('File not found in database')
+                await msg.edit(FILE_NOT_IN_DATABASE)
 
 
 @Client.on_message(filters.command('deleteall') & filters.user(ADMINS))
 async def delete_all_index(bot, message):
     await message.reply_text(
-        'This will delete all indexed files.\nDo you want to continue??',
+        DELETE_ALL_CONFIRM,
         reply_markup=InlineKeyboardMarkup(
             [
                 [
@@ -466,14 +541,17 @@ async def delete_all_index(bot, message):
 async def delete_all_index_confirm(bot, message):
     await Media.collection.drop()
     await message.answer('Piracy Is Crime')
-    await message.message.edit('Succesfully Deleted All The Indexed Files.')
+    await message.message.edit(FILES_DELETED)
 
 
 @Client.on_message(filters.command('settings'))
 async def settings(client, message):
     userid = message.from_user.id if message.from_user else None
     if not userid:
-        return await message.reply(f"You are anonymous admin. Use /connect {message.chat.id} in PM")
+        return await message.reply(bilingual(
+            f"Anonymous admins must use /connect {message.chat.id} in private chat.",
+            f"Anonymous admin ဖြစ်သောကြောင့် private chat တွင် /connect {message.chat.id} ကို အသုံးပြုပါ။",
+        ))
     chat_type = message.chat.type
 
     if chat_type == enums.ChatType.PRIVATE:
@@ -484,10 +562,10 @@ async def settings(client, message):
                 chat = await client.get_chat(grpid)
                 title = chat.title
             except:
-                await message.reply_text("Make sure I'm present in your group!!", quote=True)
+                await message.reply_text(BOT_NOT_IN_GROUP, quote=True)
                 return
         else:
-            await message.reply_text("I'm not connected to any groups!", quote=True)
+            await message.reply_text(NOT_CONNECTED, quote=True)
             return
 
     elif chat_type in [enums.ChatType.GROUP, enums.ChatType.SUPERGROUP]:
@@ -585,10 +663,16 @@ async def settings(client, message):
 
 @Client.on_message(filters.command('set_template'))
 async def save_template(client, message):
-    sts = await message.reply("Checking template")
+    sts = await message.reply(bilingual(
+        "Checking the template…",
+        "Template ကို စစ်ဆေးနေပါသည်…",
+    ))
     userid = message.from_user.id if message.from_user else None
     if not userid:
-        return await message.reply(f"You are anonymous admin. Use /connect {message.chat.id} in PM")
+        return await message.reply(bilingual(
+            f"Anonymous admins must use /connect {message.chat.id} in private chat.",
+            f"Anonymous admin ဖြစ်သောကြောင့် private chat တွင် /connect {message.chat.id} ကို အသုံးပြုပါ။",
+        ))
     chat_type = message.chat.type
 
     if chat_type == enums.ChatType.PRIVATE:
@@ -599,10 +683,10 @@ async def save_template(client, message):
                 chat = await client.get_chat(grpid)
                 title = chat.title
             except:
-                await message.reply_text("Make sure I'm present in your group!!", quote=True)
+                await message.reply_text(BOT_NOT_IN_GROUP, quote=True)
                 return
         else:
-            await message.reply_text("I'm not connected to any groups!", quote=True)
+            await message.reply_text(NOT_CONNECTED, quote=True)
             return
 
     elif chat_type in [enums.ChatType.GROUP, enums.ChatType.SUPERGROUP]:
@@ -621,7 +705,7 @@ async def save_template(client, message):
         return
 
     if len(message.command) < 2:
-        return await sts.edit("No Input!!")
+        return await sts.edit(NO_INPUT)
     template = message.text.split(" ", 1)[1]
     await save_group_settings(grp_id, 'template', template)
     await sts.edit(f"Successfully changed template for {title} to\n\n{template}")

@@ -83,7 +83,14 @@ DATABASE_NAME = environ.get('DATABASE_NAME', 'FilmXBot')
 COLLECTION_NAME = environ.get('COLLECTION_NAME', 'Telegram_files')
 
 # FSUB
-AUTH_CHANNEL = get_int('AUTH_CHANNEL', 0) or None
+# REQUIRED_CHANNEL_ID is the clearer Phase 1/2 name.  AUTH_CHANNEL remains
+# supported so existing deployments do not need to change immediately.
+AUTH_CHANNEL = get_int(
+    'REQUIRED_CHANNEL_ID',
+    get_int('AUTH_CHANNEL', 0),
+) or None
+REQUIRED_CHANNEL_URL = environ.get('REQUIRED_CHANNEL_URL', '').strip()
+PENDING_REQUEST_TTL_HOURS = get_int('PENDING_REQUEST_TTL_HOURS', 24)
 # Set to False inside the bracket if you don't want to use Request Channel else set it to Channel ID
 REQ_CHANNEL = get_int('REQ_CHANNEL', 0) or False
 JOIN_REQS_DB = environ.get("JOIN_REQS_DB", '').strip() or DATABASE_URI
@@ -105,6 +112,14 @@ FILE_STORE_CHANNEL = parse_id_list('FILE_STORE_CHANNEL')
 MELCOW_NEW_USERS = is_enabled((environ.get('MELCOW_NEW_USERS', "False")), True)
 PROTECT_CONTENT = is_enabled((environ.get('PROTECT_CONTENT', "False")), False)
 PUBLIC_FILE_STORE = is_enabled((environ.get('PUBLIC_FILE_STORE', "True")), True)
+
+# Telegram Mini App / embedded HTTP server
+MINI_APP_URL = environ.get('MINI_APP_URL', '').strip()
+MINI_APP_NAME = environ.get('MINI_APP_NAME', 'FilmX').strip() or 'FilmX'
+MINI_APP_AUTH_MAX_AGE = get_int('MINI_APP_AUTH_MAX_AGE', 86400)
+WEB_SERVER_ENABLED = is_enabled(environ.get('WEB_SERVER_ENABLED', 'True'), True)
+WEB_SERVER_HOST = environ.get('WEB_SERVER_HOST', '0.0.0.0').strip()
+WEB_SERVER_PORT = get_int('PORT', get_int('WEB_SERVER_PORT', 8080))
 
 LOG_STR = "Current Cusomized Configurations are:-\n"
 LOG_STR += ("IMDB Results are enabled, Bot will be showing imdb details for you queries.\n" if IMDB else "IMBD Results are disabled.\n")

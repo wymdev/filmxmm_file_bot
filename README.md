@@ -17,6 +17,9 @@ Optimized for FilmX community deployments.
 
 ### Features
 - Request To Join Force Subscribe Feature
+- Automatic pending-movie delivery after a required-channel join
+- Telegram Mini App with search, details, favorites, and history
+- English and Myanmar guidance across the main bot and Mini App flows
 - Fully customisable.
 - Customisable welcome & Forcesub messages.
 - More than one Posts in One Link.
@@ -104,10 +107,26 @@ Use `/pbatch` instead of `/batch` to protect the delivered files from forwarding
 - `DATABASE_NAME`: optional database name; defaults to `FilmXBot`.
 - `COLLECTION_NAME`: optional media collection; defaults to `Telegram_files`.
 - `AUTH_CHANNEL`: optional force-subscribe channel ID.
+- `REQUIRED_CHANNEL_ID`: optional alias that takes precedence over `AUTH_CHANNEL`.
+- `REQUIRED_CHANNEL_URL`: optional public username/invite URL for the join button.
 - `REQ_CHANNEL`: optional request-to-join channel ID.
 - `FILE_STORE_CHANNEL`: optional space-separated channel IDs used for direct-store links.
 - `PROTECT_CONTENT`: optional boolean controlling forwarding protection.
 - `USE_CAPTION_FILTER`: optional boolean enabling caption search.
+- `PENDING_REQUEST_TTL_HOURS`: pending join request lifetime; defaults to 24 hours.
+- `MINI_APP_URL`: public HTTPS deployment URL. When set, the bot adds an Open Movie App button and menu entry.
+- `MINI_APP_NAME`: Mini App display name; defaults to `FilmX`.
+- `WEB_SERVER_ENABLED`, `WEB_SERVER_HOST`, `WEB_SERVER_PORT`: embedded Mini App server settings.
+- `MINI_APP_AUTH_MAX_AGE`: maximum accepted Telegram init-data age in seconds.
+
+### Force-join and Mini App setup
+
+1. Add the bot as an administrator in the required channel.
+2. Set `REQUIRED_CHANNEL_ID` (or the existing `AUTH_CHANNEL`) and, when available, `REQUIRED_CHANNEL_URL`.
+3. Deploy the bot as a web process and set `MINI_APP_URL` to that public HTTPS URL.
+4. In BotFather, register the same domain for the bot's Mini App.
+
+The bot hosts the Mini App and API in its own process. Telegram `initData` is HMAC-validated on the server; browser-provided user IDs are never trusted. Pending movie requests are stored in MongoDB and claimed atomically, so a `chat_member` update and the fallback button cannot deliver the same request twice.
 
 See [.env.example](.env.example) for a minimal working configuration.
 

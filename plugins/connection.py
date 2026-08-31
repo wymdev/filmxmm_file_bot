@@ -2,6 +2,7 @@ from pyrogram import filters, Client, enums
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from database.connections_mdb import add_connection, all_connections, if_active, delete_connection
 from info import ADMINS
+from translations import BOT_NOT_IN_GROUP, GENERIC_ERROR, bilingual
 import logging
 
 logger = logging.getLogger(__name__)
@@ -20,9 +21,12 @@ async def addconnection(client, message):
             cmd, group_id = message.text.split(" ", 1)
         except:
             await message.reply_text(
-                "<b>Enter in correct format!</b>\n\n"
+                "<b>Enter the correct format:</b>\n\n"
                 "<code>/connect groupid</code>\n\n"
-                "<i>Get your Group id by adding this bot to your group and use  <code>/id</code></i>",
+                "<i>Add this bot to your group and use <code>/id</code> to get the group ID.</i>\n\n"
+                "<b>🇲🇲 ပုံစံမှန်ဖြင့် ထည့်ပါ:</b>\n\n"
+                "<code>/connect groupid</code>\n\n"
+                "<i>Bot ကို group ထဲထည့်ပြီး group ID ရယူရန် <code>/id</code> ကို အသုံးပြုပါ။</i>",
                 quote=True
             )
             return
@@ -37,12 +41,18 @@ async def addconnection(client, message):
                 and st.status != enums.ChatMemberStatus.OWNER
                 and userid not in ADMINS
         ):
-            await message.reply_text("You should be an admin in Given group!", quote=True)
+            await message.reply_text(bilingual(
+                "You must be an administrator in that group.",
+                "သင်သည် ထို group ၏ admin ဖြစ်ရပါမည်။",
+            ), quote=True)
             return
     except Exception as e:
         logger.exception(e)
         await message.reply_text(
-            "Invalid Group ID!\n\nIf correct, Make sure I'm present in your group!!",
+            bilingual(
+                "Invalid group ID. If it is correct, make sure the bot is present in the group.",
+                "Group ID မမှန်ကန်ပါ။ ID မှန်ပါက bot သည် group ထဲတွင် ရှိကြောင်း စစ်ဆေးပါ။",
+            ),
             quote=True,
         )
 
@@ -56,7 +66,10 @@ async def addconnection(client, message):
             addcon = await add_connection(str(group_id), str(userid))
             if addcon:
                 await message.reply_text(
-                    f"Successfully connected to **{title}**\nNow manage your group from my pm !",
+                    bilingual(
+                        f"Successfully connected to **{title}**. You can now manage it from my private chat.",
+                        f"**{title}** နှင့် အောင်မြင်စွာ ချိတ်ဆက်ပြီးပါပြီ။ ယခု bot private chat မှ စီမံနိုင်ပါသည်။",
+                    ),
                     quote=True,
                     parse_mode=enums.ParseMode.MARKDOWN
                 )
@@ -68,14 +81,17 @@ async def addconnection(client, message):
                     )
             else:
                 await message.reply_text(
-                    "You're already connected to this chat!",
+                    bilingual(
+                        "You're already connected to this chat.",
+                        "ဤ chat နှင့် ချိတ်ဆက်ပြီးသားဖြစ်ပါသည်။",
+                    ),
                     quote=True
                 )
         else:
-            await message.reply_text("Add me as an admin in group", quote=True)
+            await message.reply_text(BOT_NOT_IN_GROUP, quote=True)
     except Exception as e:
         logger.exception(e)
-        await message.reply_text('Some error occurred! Try again later.', quote=True)
+        await message.reply_text(GENERIC_ERROR, quote=True)
         return
 
 
@@ -87,7 +103,10 @@ async def deleteconnection(client, message):
     chat_type = message.chat.type
 
     if chat_type == enums.ChatType.PRIVATE:
-        await message.reply_text("Run /connections to view or disconnect from groups!", quote=True)
+        await message.reply_text(bilingual(
+            "Use /connections to view or disconnect groups.",
+            "ချိတ်ဆက်ထားသော group များကို ကြည့်ရန် သို့မဟုတ် ဖြုတ်ရန် /connections ကို သုံးပါ။",
+        ), quote=True)
 
     elif chat_type in [enums.ChatType.GROUP, enums.ChatType.SUPERGROUP]:
         group_id = message.chat.id
@@ -104,7 +123,10 @@ async def deleteconnection(client, message):
         if delcon:
             await message.reply_text("Successfully disconnected from this chat", quote=True)
         else:
-            await message.reply_text("This chat isn't connected to me!\nDo /connect to connect.", quote=True)
+            await message.reply_text(bilingual(
+                "This chat is not connected. Use /connect to connect it.",
+                "ဤ chat ကို မချိတ်ဆက်ရသေးပါ။ ချိတ်ဆက်ရန် /connect ကို သုံးပါ။",
+            ), quote=True)
 
 
 @Client.on_message(filters.private & filters.command(["connections"]))

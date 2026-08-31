@@ -23,6 +23,7 @@ from database.filters_mdb import (
     get_filters,
 )
 import logging
+from translations import JOIN_REQUIRED_ALERT, NO_SUCH_FILE, bilingual
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.ERROR)
@@ -52,7 +53,10 @@ async def next_page(bot, query):
         offset = 0
     search = BUTTONS.get(key)
     if not search:
-        await query.answer("You are using one of my old messages, please send the request again.", show_alert=True)
+        await query.answer(bilingual(
+            "This is an old message. Please send your request again.",
+            "ဤမက်ဆေ့ချ်သည် အဟောင်းဖြစ်ပါသည်။ တောင်းဆိုမှုကို ထပ်မံပို့ပါ။",
+        ), show_alert=True)
         return
 
     files, n_offset, total = await get_search_results(search, offset=offset, filter=True)
@@ -139,9 +143,15 @@ async def advantage_spoll_choker(bot, query):
         return await query.message.delete()
     movies = SPELL_CHECK.get(query.message.reply_to_message.id)
     if not movies:
-        return await query.answer("You are clicking on an old button which is expired.", show_alert=True)
+        return await query.answer(bilingual(
+            "This button has expired. Please search again.",
+            "ဤခလုတ်သည် သက်တမ်းကုန်သွားပါပြီ။ ထပ်မံရှာဖွေပါ။",
+        ), show_alert=True)
     movie = movies[(int(movie_))]
-    await query.answer('Checking for Movie in database...')
+    await query.answer(bilingual(
+        "Checking the movie database…",
+        "ရုပ်ရှင်ဒေတာဘေ့စ်တွင် ရှာဖွေနေပါသည်…",
+    ))
     k = await manual_filters(bot, query.message, text=movie)
     if k == False:
         files, offset, total_results = await get_search_results(movie, offset=0, filter=True)
@@ -149,7 +159,17 @@ async def advantage_spoll_choker(bot, query):
             k = (movie, files, offset, total_results)
             await auto_filter(bot, query, k)
         else:
-            k = await query.message.edit("<b>📍 Movie Not available Reasons\n\n<i>1) O.T.T Or DVD Not Released\n\n2) Type Name With Year</i> \n\n3) Movie Is Not Available in the database Say In Our Other Group To Get This Movies\n\n<a href='https://t.me/Group_Linkzzzz'>Our Groups</a></b>")
+            k = await query.message.edit(
+                "<b>📍 Movie not available</b>\n\n"
+                "1. The OTT/DVD may not be released yet.\n"
+                "2. Search using the movie name and year.\n"
+                "3. Request unavailable movies in our other group.\n\n"
+                "<b>🇲🇲 ရုပ်ရှင်မရရှိနိုင်ပါ</b>\n\n"
+                "၁။ OTT/DVD မထွက်သေးခြင်း ဖြစ်နိုင်ပါသည်။\n"
+                "၂။ ရုပ်ရှင်အမည်နှင့် ခုနှစ်ကို တွဲ၍ ရှာပါ။\n"
+                "၃။ မရှိသေးသောရုပ်ရှင်ကို အခြား group တွင် တောင်းဆိုနိုင်ပါသည်။\n\n"
+                "<a href='https://t.me/Group_Linkzzzz'>Our Groups · ကျွန်ုပ်တို့၏ Group များ</a>"
+            )
             await asyncio.sleep(10)
             await k.delete()
 
@@ -189,7 +209,10 @@ async def cb_handler(client: Client, query: CallbackQuery):
         if (st.status == enums.ChatMemberStatus.OWNER) or (userid in ADMINS):
             await del_all(query.message, grp_id, title)
         else:
-            await query.answer("You need to be Group Owner or an Auth User to do that!", show_alert=True)
+            await query.answer(bilingual(
+                "Only the group owner or an authorized user can do that.",
+                "Group ပိုင်ရှင် သို့မဟုတ် ခွင့်ပြုထားသော user သာ ဤလုပ်ဆောင်ချက်ကို အသုံးပြုနိုင်ပါသည်။",
+            ), show_alert=True)
     elif query.data == "delallcancel":
         userid = query.from_user.id
         chat_type = query.message.chat.type
@@ -208,7 +231,10 @@ async def cb_handler(client: Client, query: CallbackQuery):
                 except Exception:
                     logger.debug("Could not remove delete-filter prompt", exc_info=True)
             else:
-                await query.answer("That's not for you!!", show_alert=True)
+                await query.answer(bilingual(
+                    "You are not allowed to use this action.",
+                    "ဤလုပ်ဆောင်ချက်ကို အသုံးပြုခွင့် မရှိပါ။",
+                ), show_alert=True)
     elif "groupcb" in query.data:
         await query.answer()
 
@@ -346,7 +372,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
         ident, file_id = query.data.split("#")
         files_ = await get_file_details(file_id)
         if not files_:
-            return await query.answer('No such file exist.')
+            return await query.answer(NO_SUCH_FILE)
         files = files_[0]
         title = files.file_name
         size = get_size(files.file_size)
@@ -378,16 +404,22 @@ async def cb_handler(client: Client, query: CallbackQuery):
                     protect_content=True if ident == "filep" else False 
                 )
                 await schedule_auto_delete(query.from_user.id, sent_msg.id)
-                await query.answer('Check PM, I have sent files in pm', show_alert=True)
+                await query.answer(bilingual(
+                    "The file was sent to your private chat.",
+                    "ဖိုင်ကို သင့် private chat သို့ ပို့ပြီးပါပြီ။",
+                ), show_alert=True)
         except UserIsBlocked:
-            await query.answer('Unblock the bot mahn !', show_alert=True)
+            await query.answer(bilingual(
+                "Please unblock the bot first.",
+                "ကျေးဇူးပြု၍ bot ကို အရင် unblock လုပ်ပါ။",
+            ), show_alert=True)
         except PeerIdInvalid:
             await query.answer(url=f"https://t.me/{temp.U_NAME}?start={ident}_{file_id}")
         except Exception:
             await query.answer(url=f"https://t.me/{temp.U_NAME}?start={ident}_{file_id}")
     elif query.data.startswith("checksub"):
         if (AUTH_CHANNEL or REQ_CHANNEL) and not await is_subscribed(client, query):
-            await query.answer("I Like Your Smartness, But Don't Be Oversmart 😒", show_alert=True)
+            await query.answer(JOIN_REQUIRED_ALERT, show_alert=True)
             return
         ident, file_id = query.data.split("#", 1)
         if file_id in ["False", "subscribe"] or not file_id:
@@ -439,7 +471,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
             except Exception:
                 logger.debug("Could not decode file callback payload", exc_info=True)
         if not files_:
-            return await query.answer('No such file exist.')
+            return await query.answer(NO_SUCH_FILE)
         files = files_[0]
         title = files.file_name
         size = get_size(files.file_size)
@@ -624,7 +656,10 @@ async def cb_handler(client: Client, query: CallbackQuery):
         grpid = await active_connection(str(query.from_user.id))
 
         if str(grp_id) != str(grpid):
-            await query.message.edit("Your Active Connection Has Been Changed. Go To /settings.")
+            await query.message.edit(bilingual(
+                "Your active connection changed. Open /settings again.",
+                "လက်ရှိချိတ်ဆက်မှု ပြောင်းလဲသွားပါပြီ။ /settings ကို ပြန်ဖွင့်ပါ။",
+            ))
             return await query.answer('Piracy Is Crime')
 
         if status == "True":
@@ -806,7 +841,12 @@ async def advantage_spell_chok(msg):
     g_s += await search_gagala(msg.text)
     gs_parsed = []
     if not g_s:
-        k = await msg.reply("<b>I couldn't find anything in than name.\n\n<a href='https://t.me/Group_Linkzzzz'>Check in our other groups</a></b>")
+        k = await msg.reply(
+            "<b>I couldn't find that title.</b>\n"
+            "<a href='https://t.me/Group_Linkzzzz'>Check our other groups</a>\n\n"
+            "<b>🇲🇲 ထိုအမည်ဖြင့် ရှာမတွေ့ပါ။</b>\n"
+            "<a href='https://t.me/Group_Linkzzzz'>အခြား group များတွင် ရှာကြည့်ပါ</a>"
+        )
         await asyncio.sleep(8)
         await k.delete()
         return
@@ -835,7 +875,10 @@ async def advantage_spell_chok(msg):
     movielist += [(re.sub(r'(\-|\(|\)|_)', '', i, flags=re.IGNORECASE)).strip() for i in gs_parsed]
     movielist = list(dict.fromkeys(movielist))  # removing duplicates
     if not movielist:
-        k = await msg.reply("I couldn't find anything related to that. Check your spelling")
+        k = await msg.reply(bilingual(
+            "I couldn't find anything related. Check the spelling and try again.",
+            "ဆက်စပ်သောရလဒ် မတွေ့ပါ။ စာလုံးပေါင်းစစ်ပြီး ထပ်မံရှာဖွေပါ။",
+        ))
         await asyncio.sleep(8)
         await k.delete()
         return
@@ -847,7 +890,7 @@ async def advantage_spell_chok(msg):
         )
     ] for k, movie in enumerate(movielist)]
     btn.append([InlineKeyboardButton(text="Close", callback_data=f'spolling#{user}#close_spellcheck')])
-    await msg.reply("<b><i>I couldn't find anything related to that Did you mean any one of these?\n\nനിങ്ങൾ ഉദ്ദേശിച്ച മൂവി താഴെ കാണുന്ന വല്ലതും ആണ് എങ്കിൽ.അതിൽ ക്ലിക്ക് ചെയ്യുക</i></b>",
+    await msg.reply("<b><i>I couldn't find an exact match. Did you mean one of these?\n\n🇲🇲 အတိအကျ ကိုက်ညီသောရလဒ် မတွေ့ပါ။ အောက်ပါရုပ်ရှင်များထဲမှ တစ်ခုကို ဆိုလိုပါသလား။</i></b>",
                     reply_markup=InlineKeyboardMarkup(btn))
 
 

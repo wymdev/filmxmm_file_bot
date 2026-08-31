@@ -1,167 +1,76 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-# (c) @AlbertEinsteinTG
 
 import asyncio
+import logging
+
 from pyrogram import Client, enums
-from pyrogram.errors import FloodWait, UserNotParticipant, PeerIdInvalid
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message
+from pyrogram.errors import FloodWait
+from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
 
-from database.join_reqs import join_reqs
-from info import REQ_CHANNEL, AUTH_CHANNEL, JOIN_REQS_DB, ADMINS
-from utils import temp
+from database.pending_requests import save_pending_request
+from force_join import (
+    get_required_channel_url,
+    is_channel_member,
+    set_required_channel_url,
+)
+from info import ADMINS, AUTH_CHANNEL, REQ_CHANNEL
+from translations import FORCE_JOIN_TEXT, JOIN_LOOKUP_FAILED
 
-from logging import getLogger
 
-logger = getLogger(__name__)
-INVITE_LINK = None
-async def ForceSub(bot: Client, update: Message, file_id: str = False, mode="checksub"):
+logger = logging.getLogger(__name__)
 
-    global INVITE_LINK
-    if update.from_user.id in ADMINS:
+
+async def ForceSub(
+    bot: Client,
+    update: Message,
+    file_id: str = False,
+    mode="checksub",
+):
+    """Verify membership and remember the requested file when it is missing."""
+    user_id = update.from_user.id
+    if user_id in ADMINS or not (AUTH_CHANNEL or REQ_CHANNEL):
         return True
 
-    if not AUTH_CHANNEL and not REQ_CHANNEL:
+    if await is_channel_member(bot, user_id):
         return True
 
-    is_cb = False
-    if not hasattr(update, "chat"):
-        update.message.from_user = update.from_user
-        update = update.message
-        is_cb = True
-
-    # Create Invite Link if not exists
     try:
-        # Makes the bot a bit faster and also eliminates many issues realted to invite links.
-        if INVITE_LINK is None:
-            chat_id = REQ_CHANNEL if REQ_CHANNEL else AUTH_CHANNEL
-            try:
-                chat = await bot.get_chat(int(chat_id))
-                if chat.username:
-                    invite_link = f"https://t.me/{chat.username}"
-                elif chat.invite_link:
-                    invite_link = chat.invite_link
-                else:
-                    invite_link = (await bot.create_chat_invite_link(
-                        chat_id=int(chat_id),
-                        creates_join_request=True if REQ_CHANNEL and JOIN_REQS_DB else False
-                    )).invite_link
-            except Exception as e:
-                logger.error(f"Failed to fetch invite link automatically: {e}")
-                invite_link = (await bot.create_chat_invite_link(
-                    chat_id=int(chat_id),
-                    creates_join_request=True if REQ_CHANNEL and JOIN_REQS_DB else False
-                )).invite_link
-            INVITE_LINK = invite_link
-            logger.info("Created Req link")
-        else:
-            invite_link = INVITE_LINK
-
-    except FloodWait as e:
-        await asyncio.sleep(e.value)
-        fix_ = await ForceSub(bot, update, file_id, mode=mode)
-        return fix_
-
+        invite_link = await get_required_channel_url(bot)
+    except FloodWait as error:
+        await asyncio.sleep(error.value)
+        return await ForceSub(bot, update, file_id=file_id, mode=mode)
     except Exception:
-        logger.exception(f"Unable to do Force Subscribe to {REQ_CHANNEL if REQ_CHANNEL else AUTH_CHANNEL}")
-        await update.reply(
-            text="Something went Wrong.",
-            parse_mode=enums.ParseMode.MARKDOWN,
-            disable_web_page_preview=True
-        )
+        logger.exception("Unable to create the force-join invite link")
+        await update.reply(JOIN_LOOKUP_FAILED)
         return False
 
-    # Mian Logic
-    if REQ_CHANNEL and join_reqs.is_active():
-        try:
-            # Check if User is Requested to Join Channel
-            user = await join_reqs.get_user(update.from_user.id)
-            if user and user["user_id"] == update.from_user.id:
-                return True
-        except Exception as e:
-            logger.exception(e, exc_info=True)
-            await update.reply(
-                text="Something went Wrong.",
-                parse_mode=enums.ParseMode.MARKDOWN,
-                disable_web_page_preview=True
-            )
-            return False
+    token = None
+    if file_id and str(file_id) not in {"False", "subscribe"}:
+        token = await save_pending_request(user_id, str(file_id), mode)
 
-    try:
-        chat_id = REQ_CHANNEL if REQ_CHANNEL else AUTH_CHANNEL
-        if not chat_id:
-            raise UserNotParticipant
-        # Check if User is Already Joined Channel
-        user = await bot.get_chat_member(
-                   chat_id=int(chat_id), 
-                   user_id=update.from_user.id
-               )
-        if user.status == enums.ChatMemberStatus.BANNED:
-            await bot.send_message(
-                chat_id=update.from_user.id,
-                text="Sorry Sir, You are Banned to use me.",
-                parse_mode=enums.ParseMode.MARKDOWN,
-                disable_web_page_preview=True,
-                reply_to_message_id=update.message_id
-            )
-            return False
-
-        else:
-            return True
-    except (UserNotParticipant, PeerIdInvalid):
-        text="""**Join Our Channel to Get Your File!**
-
-To download the requested file, please follow these steps:
-1. Click the **Request to Join Channel** button below.
-2. After request approval, return here and click **Try Again** to receive your file!"""
-
-        retry_button = (
-            InlineKeyboardButton(
-                " 🔄 Try Again 🔄 ",
-                url=f"https://t.me/{temp.U_NAME}?start={file_id}",
-            )
-            if str(file_id).startswith(("BATCH-", "DSTORE-"))
-            else InlineKeyboardButton(
-                " 🔄 Try Again 🔄 ", callback_data=f"{mode}#{file_id}"
-            )
-        )
-        buttons = [
+    buttons = [[InlineKeyboardButton("📢 Join Channel · ချန်နယ်ဝင်ရန်", url=invite_link)]]
+    if token:
+        buttons.append(
             [
-                InlineKeyboardButton("📢 Request to Join Channel 📢", url=invite_link)
-            ],
-            [
-                retry_button
-            ],
-            [
-                InlineKeyboardButton("Update", url="https://t.me/filmxhub20"),
-                InlineKeyboardButton("🍿 FilmX 🍿", url="https://t.me/filmxhub20")
+                InlineKeyboardButton(
+                    "✅ Get Movie · ရုပ်ရှင်ရယူရန်",
+                    callback_data=f"check_movie:{token}",
+                )
             ]
-        ]
-        
-        if not is_cb:
-            await update.reply(
-                text=text,
-                quote=True,
-                reply_markup=InlineKeyboardMarkup(buttons),
-                parse_mode=enums.ParseMode.MARKDOWN,
-            )
-        return False
-
-    except FloodWait as e:
-        await asyncio.sleep(e.value)
-        fix_ = await ForceSub(bot, update, file_id, mode=mode)
-        return fix_
-
-    except Exception:
-        logger.exception("Something Went Wrong! Unable to do Force Subscribe.")
-        await update.reply(
-            text="Something went Wrong.",
-            parse_mode=enums.ParseMode.MARKDOWN,
-            disable_web_page_preview=True
         )
-        return False
+
+    # Callback queries have .message rather than .chat. New Phase 1 buttons no
+    # longer rely on this path, but keeping the distinction preserves old links.
+    target = update if hasattr(update, "chat") else update.message
+    await target.reply(
+        text=FORCE_JOIN_TEXT,
+        quote=True,
+        reply_markup=InlineKeyboardMarkup(buttons),
+        parse_mode=enums.ParseMode.HTML,
+    )
+    return False
 
 
 def set_global_invite(url: str):
-    global INVITE_LINK
-    INVITE_LINK = url
+    """Backward-compatible alias used by older deployments/tests."""
+    set_required_channel_url(url)

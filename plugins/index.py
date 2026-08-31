@@ -7,6 +7,7 @@ from info import INDEX_REQ_CHANNEL as LOG_CHANNEL
 from database.ia_filterdb import save_file
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from utils import temp
+from translations import BOT_NOT_IN_GROUP, PROCESSING, bilingual
 import re
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -27,10 +28,13 @@ async def index_files(bot, query):
         return
 
     if lock.locked():
-        return await query.answer('Wait until previous process complete.', show_alert=True)
+        return await query.answer(bilingual(
+            "Wait until the previous process finishes.",
+            "ယခင်လုပ်ဆောင်ချက် ပြီးဆုံးသည်အထိ စောင့်ပါ။",
+        ), show_alert=True)
     msg = query.message
 
-    await query.answer('Processing...⏳', show_alert=True)
+    await query.answer(PROCESSING, show_alert=True)
     if int(from_user) not in ADMINS:
         await bot.send_message(int(from_user),
                                f'Your Submission for indexing {chat} has been accepted by our moderators and will be added soon.',
@@ -54,7 +58,10 @@ async def send_for_index(bot, message):
         regex = re.compile(r"(https://)?(t\.me/|telegram\.me/|telegram\.dog/)(c/)?(\d+|[a-zA-Z_0-9]+)/(\d+)$")
         match = regex.match(message.text)
         if not match:
-            return await message.reply('Invalid link')
+            return await message.reply(bilingual(
+                "Invalid Telegram link.",
+                "Telegram လင့်ခ် မမှန်ကန်ပါ။",
+            ))
         chat_id = match.group(4)
         last_msg_id = int(match.group(5))
         if chat_id.isnumeric():
@@ -67,18 +74,24 @@ async def send_for_index(bot, message):
     try:
         await bot.get_chat(chat_id)
     except ChannelInvalid:
-        return await message.reply('This may be a private channel / group. Make me an admin over there to index the files.')
+        return await message.reply(bilingual(
+            "This may be private. Add the bot there as an admin before indexing files.",
+            "Private channel/group ဖြစ်နိုင်ပါသည်။ ဖိုင်များမှတ်တမ်းမတင်မီ bot ကို admin အဖြစ် ထည့်ပါ။",
+        ))
     except (UsernameInvalid, UsernameNotModified):
-        return await message.reply('Invalid Link specified.')
+        return await message.reply(bilingual(
+            "Invalid Telegram link.",
+            "Telegram လင့်ခ် မမှန်ကန်ပါ။",
+        ))
     except Exception as e:
         logger.exception(e)
         return await message.reply(f'Errors - {e}')
     try:
         k = await bot.get_messages(chat_id, last_msg_id)
     except:
-        return await message.reply('Make Sure That Iam An Admin In The Channel, if channel is private')
+        return await message.reply(BOT_NOT_IN_GROUP)
     if k.empty:
-        return await message.reply('This may be group and iam not a admin of the group.')
+        return await message.reply(BOT_NOT_IN_GROUP)
 
     if message.from_user.id in ADMINS:
         buttons = [
@@ -99,7 +112,7 @@ async def send_for_index(bot, message):
         try:
             link = (await bot.create_chat_invite_link(chat_id)).invite_link
         except ChatAdminRequired:
-            return await message.reply('Make sure iam an admin in the chat and have permission to invite users.')
+            return await message.reply(BOT_NOT_IN_GROUP)
     else:
         link = f"@{message.forward_from_chat.username}"
     buttons = [
@@ -116,7 +129,10 @@ async def send_for_index(bot, message):
     await bot.send_message(LOG_CHANNEL,
                            f'#IndexRequest\n\nBy : {message.from_user.mention} (<code>{message.from_user.id}</code>)\nChat ID/ Username - <code> {chat_id}</code>\nLast Message ID - <code>{last_msg_id}</code>\nInviteLink - {link}',
                            reply_markup=reply_markup)
-    await message.reply('ThankYou For the Contribution, Wait For My Moderators to verify the files.')
+    await message.reply(bilingual(
+        "Thank you. Please wait for the moderators to verify the submitted files.",
+        "ကျေးဇူးတင်ပါသည်။ ပို့ထားသောဖိုင်များကို moderator များ စစ်ဆေးပြီးသည်အထိ စောင့်ပါ။",
+    ))
 
 
 @Client.on_message(filters.command('setskip') & filters.user(ADMINS))
@@ -126,11 +142,17 @@ async def set_skip_number(bot, message):
         try:
             skip = int(skip)
         except:
-            return await message.reply("Skip number should be an integer.")
+            return await message.reply(bilingual(
+                "The skip value must be a whole number.",
+                "Skip တန်ဖိုးသည် ကိန်းပြည့်ဖြစ်ရပါမည်။",
+            ))
         await message.reply(f"Successfully set SKIP number as {skip}")
         temp.CURRENT = int(skip)
     else:
-        await message.reply("Give me a skip number")
+        await message.reply(bilingual(
+            "Provide a skip number.",
+            "Skip အရေအတွက် ထည့်ပါ။",
+        ))
 
 
 async def index_files_to_db(lst_msg_id, chat, msg, bot):

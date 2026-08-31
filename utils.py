@@ -13,7 +13,7 @@ from typing import List
 from database.users_chats_db import db
 from bs4 import BeautifulSoup
 import requests
-from database.join_reqs import join_reqs
+from force_join import is_channel_member
 
 
 logger = logging.getLogger(__name__)
@@ -44,34 +44,7 @@ class temp(object):
     SETTINGS = {}
 
 async def is_subscribed(bot, query):
-    if not AUTH_CHANNEL and not REQ_CHANNEL:
-        return True
-    elif query.from_user.id in ADMINS:
-        return True
-    
-
-    if join_reqs.is_active():
-        user = await join_reqs.get_user(query.from_user.id)
-        if user:
-            return True
-        else:
-            return False
-
-    if not AUTH_CHANNEL:
-        return True
-
-    try:
-        user = await bot.get_chat_member(AUTH_CHANNEL, query.from_user.id)
-    except UserNotParticipant:
-        return False
-    except Exception as e:
-        logger.exception(e)
-        return False
-    else:
-        if not (user.status == enums.ChatMemberStatus.BANNED):
-            return True
-        else:
-            return False
+    return await is_channel_member(bot, query.from_user.id)
 
 
 def _get_poster(query, bulk=False, id=False, file=None):

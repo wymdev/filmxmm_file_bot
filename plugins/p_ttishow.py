@@ -10,6 +10,7 @@ from database.ia_filterdb import Media
 from utils import get_size, temp, get_settings
 from Script import script
 from pyrogram.errors import ChatAdminRequired
+from translations import BOT_NOT_IN_GROUP, bilingual
 
 """-----------------------------------------https://t.me/GetTGLink/4179 --------------------------------------"""
 
@@ -62,7 +63,7 @@ async def save_group(bot, message):
 @Client.on_message(filters.command('leave') & filters.user(ADMINS))
 async def leave_a_chat(bot, message):
     if len(message.command) == 1:
-        return await message.reply('Give me a chat id')
+        return await message.reply(bilingual("Provide a chat ID.", "Chat ID ထည့်ပါ။"))
     chat = message.command[1]
     try:
         chat = int(chat)
@@ -87,7 +88,7 @@ async def leave_a_chat(bot, message):
 @Client.on_message(filters.command('disable') & filters.user(ADMINS))
 async def disable_chat(bot, message):
     if len(message.command) == 1:
-        return await message.reply('Give me a chat id')
+        return await message.reply(bilingual("Provide a chat ID.", "Chat ID ထည့်ပါ။"))
     r = message.text.split(None)
     if len(r) > 2:
         reason = message.text.split(None, 2)[2]
@@ -97,10 +98,10 @@ async def disable_chat(bot, message):
     try:
         chat_ = int(chat)
     except:
-        return await message.reply('Give Me A Valid Chat ID')
+        return await message.reply(bilingual("Provide a valid chat ID.", "မှန်ကန်သော Chat ID ထည့်ပါ။"))
     cha_t = await db.get_chat(int(chat_))
     if not cha_t:
-        return await message.reply("Chat Not Found In DB")
+        return await message.reply(bilingual("Chat not found in the database.", "Chat ကို ဒေတာဘေ့စ်တွင် မတွေ့ပါ။"))
     if cha_t['is_disabled']:
         return await message.reply(f"This chat is already disabled:\nReason-<code> {cha_t['reason']} </code>")
     await db.disable_chat(int(chat_), reason)
@@ -123,15 +124,15 @@ async def disable_chat(bot, message):
 @Client.on_message(filters.command('enable') & filters.user(ADMINS))
 async def re_enable_chat(bot, message):
     if len(message.command) == 1:
-        return await message.reply('Give me a chat id')
+        return await message.reply(bilingual("Provide a chat ID.", "Chat ID ထည့်ပါ။"))
     chat = message.command[1]
     try:
         chat_ = int(chat)
     except:
-        return await message.reply('Give Me A Valid Chat ID')
+        return await message.reply(bilingual("Provide a valid chat ID.", "မှန်ကန်သော Chat ID ထည့်ပါ။"))
     sts = await db.get_chat(int(chat))
     if not sts:
-        return await message.reply("Chat Not Found In DB !")
+        return await message.reply(bilingual("Chat not found in the database.", "Chat ကို ဒေတာဘေ့စ်တွင် မတွေ့ပါ။"))
     if not sts.get('is_disabled'):
         return await message.reply('This chat is not yet disabled.')
     await db.re_enable_chat(int(chat_))
@@ -157,16 +158,16 @@ async def get_ststs(bot, message):
 # @Client.on_message(filters.command('invite') & filters.user(ADMINS))
 async def gen_invite(bot, message):
     if len(message.command) == 1:
-        return await message.reply('Give me a chat id')
+        return await message.reply(bilingual("Provide a chat ID.", "Chat ID ထည့်ပါ။"))
     chat = message.command[1]
     try:
         chat = int(chat)
     except:
-        return await message.reply('Give Me A Valid Chat ID')
+        return await message.reply(bilingual("Provide a valid chat ID.", "မှန်ကန်သော Chat ID ထည့်ပါ။"))
     try:
         link = await bot.create_chat_invite_link(chat)
     except ChatAdminRequired:
-        return await message.reply("Invite Link Generation Failed, Iam Not Having Sufficient Rights")
+        return await message.reply(BOT_NOT_IN_GROUP)
     except Exception as e:
         return await message.reply(f'Error {e}')
     await message.reply(f'Here is your Invite Link {link.invite_link}')
@@ -175,7 +176,7 @@ async def gen_invite(bot, message):
 async def ban_a_user(bot, message):
     # https://t.me/GetTGLink/4185
     if len(message.command) == 1:
-        return await message.reply('Give me a user id / username')
+        return await message.reply(bilingual("Provide a user ID or username.", "User ID သို့မဟုတ် username ထည့်ပါ။"))
     r = message.text.split(None)
     if len(r) > 2:
         reason = message.text.split(None, 2)[2]
@@ -190,7 +191,10 @@ async def ban_a_user(bot, message):
     try:
         k = await bot.get_users(chat)
     except PeerIdInvalid:
-        return await message.reply("This is an invalid user, make sure ia have met him before.")
+        return await message.reply(bilingual(
+            "Invalid user. Make sure the user has interacted with the bot before.",
+            "User မမှန်ကန်ပါ။ ထို user သည် bot နှင့် ယခင်က ဆက်သွယ်ဖူးကြောင်း စစ်ဆေးပါ။",
+        ))
     except IndexError:
         return await message.reply("This might be a channel, make sure its a user.")
     except Exception as e:
@@ -208,7 +212,7 @@ async def ban_a_user(bot, message):
 @Client.on_message(filters.command('unban') & filters.user(ADMINS))
 async def unban_a_user(bot, message):
     if len(message.command) == 1:
-        return await message.reply('Give me a user id / username')
+        return await message.reply(bilingual("Provide a user ID or username.", "User ID သို့မဟုတ် username ထည့်ပါ။"))
     chat = message.command[1]
     try:
         chat = int(chat)
@@ -217,7 +221,10 @@ async def unban_a_user(bot, message):
     try:
         k = await bot.get_users(chat)
     except PeerIdInvalid:
-        return await message.reply("This is an invalid user, make sure ia have met him before.")
+        return await message.reply(bilingual(
+            "Invalid user. Make sure the user has interacted with the bot before.",
+            "User မမှန်ကန်ပါ။ ထို user သည် bot နှင့် ယခင်က ဆက်သွယ်ဖူးကြောင်း စစ်ဆေးပါ။",
+        ))
     except IndexError:
         return await message.reply("Thismight be a channel, make sure its a user.")
     except Exception as e:
