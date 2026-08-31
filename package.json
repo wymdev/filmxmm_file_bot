@@ -1,0 +1,12 @@
+{
+  "name": "filmx-telegram-mini-app",
+  "private": true,
+  "scripts": {
+    "build:css": "tailwindcss -i ./miniapp/tailwind.input.css -o ./miniapp/styles.css --minify",
+    "check:js": "node --check ./miniapp/app.js"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "4.3.3",
+    "tailwindcss": "4.3.3"
+  }
+}

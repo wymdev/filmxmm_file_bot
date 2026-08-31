@@ -3,87 +3,125 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#0d0d12">
+  <meta name="theme-color" content="#09090b">
+  <meta name="description" content="Search the FilmX movie library and receive movies in Telegram.">
   <title>FilmX</title>
-  <link rel="stylesheet" href="/static/styles.css">
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link rel="stylesheet" href="/static/styles.css?v=3">
+  <script defer src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script defer src="/static/app.js?v=3"></script>
 </head>
-<body>
-  <div class="app-shell">
-    <header class="topbar">
-      <a class="brand" href="#" aria-label="FilmX home">
-        <span class="brand-mark" aria-hidden="true">F</span>
+<body class="m-0 min-h-dvh bg-app font-sans text-ink selection:bg-accent selection:text-on-accent">
+  <div class="mx-auto min-h-dvh max-w-5xl pb-[calc(7rem+env(safe-area-inset-bottom))]">
+    <header class="flex items-center justify-between px-5 pb-3 pt-[calc(1rem+env(safe-area-inset-top))] sm:px-8">
+      <a class="flex items-center gap-2.5 text-sm font-semibold tracking-tight text-ink no-underline" href="#" aria-label="FilmX home">
+        <span class="grid size-9 place-items-center rounded-xl bg-accent font-display text-lg italic text-on-accent shadow-lg shadow-black/10" aria-hidden="true">F</span>
         <span id="app-name">FilmX</span>
       </a>
-      <button class="avatar" id="avatar" type="button" aria-label="User profile">FX</button>
+      <div class="flex items-center gap-2">
+        <span class="hidden rounded-full border border-line px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[.16em] text-subtle sm:block" id="library-total">Movie library</span>
+        <button class="grid size-9 place-items-center rounded-full border border-line bg-surface text-[10px] font-bold text-ink" id="avatar" type="button" aria-label="User profile">FX</button>
+      </div>
     </header>
 
-    <main>
-      <section class="hero" id="hero">
-        <p class="eyebrow">YOUR NEXT MOVIE</p>
-        <h1>Stories worth<br><em>watching.</em></h1>
-        <p class="hero-copy">Search the FilmX library and send any movie straight to your Telegram chat.<br><span lang="my">FilmX ရုပ်ရှင်စာရင်းတွင် ရှာဖွေပြီး Telegram chat သို့ တိုက်ရိုက်ပို့နိုင်ပါသည်။</span></p>
+    <main class="px-5 sm:px-8">
+      <section class="relative overflow-hidden py-10 sm:py-16" id="hero">
+        <div class="pointer-events-none absolute -right-14 top-3 size-48 rounded-full border border-accent/20 sm:size-64" aria-hidden="true"></div>
+        <div class="relative max-w-2xl">
+          <p class="mb-3 text-[10px] font-bold uppercase tracking-[.24em] text-accent">FILMX COLLECTION</p>
+          <h1 class="m-0 font-display text-5xl font-normal leading-[.92] tracking-[-.055em] text-ink sm:text-7xl">
+            Find your next<br><em class="font-normal text-accent">great story.</em>
+          </h1>
+          <p class="mt-5 max-w-lg text-sm leading-6 text-subtle">
+            Search fast. Unlock once. Receive your movie directly in Telegram.<br>
+            <span lang="my">မြန်မြန်ရှာပါ၊ တစ်ကြိမ်ဝင်ပြီး Telegram မှာ ရုပ်ရှင်တိုက်ရိုက်ရယူပါ။</span>
+          </p>
+        </div>
       </section>
 
-      <form class="search" id="search-form" role="search">
-        <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m21 21-4.4-4.4m2.4-5.1a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0Z"/></svg>
-        <input id="search-input" type="search" autocomplete="off" placeholder="Search movies · ရုပ်ရှင်ရှာရန်…" aria-label="Search movies">
-        <button type="button" id="clear-search" aria-label="Clear search">×</button>
-      </form>
-
-      <section class="library" aria-live="polite">
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow" id="section-kicker">DISCOVER</p>
-            <h2 id="section-title">Latest arrivals</h2>
+      <section class="sticky top-2 z-20 mb-9" aria-label="Movie search and filters">
+        <div class="glass-bar rounded-2xl border p-2 shadow-float">
+          <form class="flex items-center gap-2" id="search-form" role="search">
+            <svg class="ml-2 size-5 shrink-0 fill-none stroke-subtle stroke-2" aria-hidden="true" viewBox="0 0 24 24"><path stroke-linecap="round" d="m21 21-4.4-4.4m2.4-5.1a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0Z"/></svg>
+            <input class="h-11 min-w-0 flex-1 border-0 bg-transparent text-sm text-ink outline-none placeholder:text-subtle" id="search-input" type="search" inputmode="search" autocomplete="off" enterkeyhint="search" placeholder="Title, year, language, quality…" aria-label="Search movies">
+            <button class="hidden size-9 shrink-0 rounded-xl text-xl text-subtle hover:bg-elevated" type="button" id="clear-search" aria-label="Clear search">×</button>
+          </form>
+          <div class="flex items-center gap-2 overflow-x-auto border-t border-line px-1 pt-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div class="flex shrink-0 gap-1.5" id="quality-filters" aria-label="Quality filter">
+              <button class="filter-chip rounded-full border border-line px-3 py-1.5 text-[10px] font-semibold text-subtle transition" type="button" data-quality="" aria-pressed="true">All</button>
+              <button class="filter-chip rounded-full border border-line px-3 py-1.5 text-[10px] font-semibold text-subtle transition" type="button" data-quality="1080p" aria-pressed="false">1080p</button>
+              <button class="filter-chip rounded-full border border-line px-3 py-1.5 text-[10px] font-semibold text-subtle transition" type="button" data-quality="720p" aria-pressed="false">720p</button>
+              <button class="filter-chip rounded-full border border-line px-3 py-1.5 text-[10px] font-semibold text-subtle transition" type="button" data-quality="480p" aria-pressed="false">480p</button>
+            </div>
+            <label class="ml-auto shrink-0">
+              <span class="sr-only">File type</span>
+              <select class="rounded-full border border-line bg-surface px-3 py-1.5 text-[10px] font-semibold text-subtle outline-none focus:border-accent" id="type-filter">
+                <option value="">All types</option>
+                <option value="video">Video</option>
+                <option value="document">Document</option>
+              </select>
+            </label>
           </div>
-          <span id="result-count"></span>
         </div>
-        <div class="movie-grid" id="movie-grid"></div>
-        <button class="load-more" id="load-more" type="button" hidden>Load more · နောက်ထပ်ကြည့်ရန်</button>
-        <div class="empty-state" id="empty-state" hidden>
-          <span aria-hidden="true">◌</span>
-          <h3>Nothing here yet · မရှိသေးပါ</h3>
-          <p>Try another title or explore the latest arrivals.<br><span lang="my">အခြားရုပ်ရှင်အမည်ဖြင့် ရှာဖွေကြည့်ပါ။</span></p>
+        <p class="mt-2 hidden px-2 text-[10px] text-subtle" id="search-status" role="status" aria-live="polite"></p>
+      </section>
+
+      <section aria-live="polite" aria-busy="false" id="library">
+        <div class="mb-5 flex items-end justify-between gap-4">
+          <div>
+            <p class="mb-1.5 text-[9px] font-bold uppercase tracking-[.22em] text-accent" id="section-kicker">DISCOVER</p>
+            <h2 class="m-0 font-display text-3xl font-normal tracking-tight" id="section-title">Latest arrivals</h2>
+          </div>
+          <span class="pb-1 text-[10px] tabular-nums text-subtle" id="result-count"></span>
         </div>
-        <div class="loading" id="loading" hidden><i></i><i></i><i></i></div>
+
+        <div class="grid grid-cols-2 gap-x-3 gap-y-7 sm:grid-cols-3 sm:gap-x-4 lg:grid-cols-4" id="movie-grid"></div>
+        <button class="mt-8 min-h-12 w-full rounded-xl border border-line bg-surface text-xs font-bold text-ink transition hover:border-accent disabled:opacity-50" id="load-more" type="button" hidden>Load more · နောက်ထပ်ကြည့်ရန်</button>
+
+        <div class="py-14 text-center" id="empty-state" hidden>
+          <span class="font-display text-6xl text-accent" aria-hidden="true">◌</span>
+          <h3 class="mb-1 mt-2 font-display text-2xl font-normal">Nothing found · မတွေ့ပါ</h3>
+          <p class="m-0 text-xs leading-5 text-subtle">Try fewer words or remove a quality filter.<br><span lang="my">စာလုံးနည်းနည်းဖြင့်ရှာပါ သို့မဟုတ် quality filter ကို ဖြုတ်ပါ။</span></p>
+        </div>
+
+        <div class="flex justify-center gap-1.5 py-12" id="loading" hidden aria-label="Loading movies">
+          <i class="loading-dot size-1.5 rounded-full bg-accent"></i><i class="loading-dot size-1.5 rounded-full bg-accent"></i><i class="loading-dot size-1.5 rounded-full bg-accent"></i>
+        </div>
       </section>
     </main>
 
-    <nav class="bottom-nav" aria-label="Main navigation">
-      <button class="active" type="button" data-view="home"><span>⌂</span>Home</button>
-      <button type="button" data-view="search"><span>⌕</span>Search</button>
-      <button type="button" data-view="favorites"><span>♡</span>Favorites</button>
-      <button type="button" data-view="history"><span>↺</span>History</button>
+    <nav class="glass-bar fixed inset-x-3 bottom-[calc(.65rem+env(safe-area-inset-bottom))] z-30 mx-auto grid max-w-md grid-cols-4 rounded-2xl border p-1.5 shadow-float" aria-label="Main navigation">
+      <button class="nav-button active grid min-h-12 place-items-center gap-0.5 rounded-xl text-[9px] text-subtle transition hover:bg-elevated" type="button" data-view="home"><span class="text-lg leading-none" aria-hidden="true">⌂</span>Home</button>
+      <button class="nav-button grid min-h-12 place-items-center gap-0.5 rounded-xl text-[9px] text-subtle transition hover:bg-elevated" type="button" data-view="search"><span class="text-lg leading-none" aria-hidden="true">⌕</span>Search</button>
+      <button class="nav-button grid min-h-12 place-items-center gap-0.5 rounded-xl text-[9px] text-subtle transition hover:bg-elevated" type="button" data-view="favorites"><span class="text-lg leading-none" aria-hidden="true">♡</span>Favorites</button>
+      <button class="nav-button grid min-h-12 place-items-center gap-0.5 rounded-xl text-[9px] text-subtle transition hover:bg-elevated" type="button" data-view="history"><span class="text-lg leading-none" aria-hidden="true">↺</span>History</button>
     </nav>
   </div>
 
-  <dialog class="sheet" id="movie-sheet">
-    <button class="sheet-close" type="button" data-close="movie-sheet" aria-label="Close">×</button>
-    <div class="detail-poster" id="detail-poster"><span>FX</span></div>
-    <div class="detail-body">
-      <p class="eyebrow">NOW SELECTED</p>
-      <h2 id="detail-title"></h2>
-      <div class="meta" id="detail-meta"></div>
-      <p class="detail-copy" id="detail-copy"></p>
-      <div class="detail-actions">
-        <button class="primary-action" id="get-movie" type="button">Get movie · ရုပ်ရှင်ရယူရန် <span>→</span></button>
-        <button class="favorite-action" id="favorite-movie" type="button" aria-label="Add to favorites">♡</button>
+  <dialog class="m-auto mb-2 max-h-[90dvh] w-[calc(100%-1rem)] max-w-lg overflow-auto rounded-3xl border border-line bg-surface p-0 text-ink shadow-float backdrop:bg-black/75" id="movie-sheet">
+    <button class="absolute right-3 top-3 z-10 grid size-9 place-items-center rounded-full border border-line bg-app/80 text-xl backdrop-blur" type="button" data-close="movie-sheet" aria-label="Close">×</button>
+    <div class="poster-art grid h-56 place-items-center" id="detail-poster"><span class="font-display text-6xl italic text-accent">FX</span></div>
+    <div class="p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:p-7">
+      <p class="mb-2 text-[9px] font-bold uppercase tracking-[.22em] text-accent">NOW SELECTED</p>
+      <h2 class="m-0 font-display text-3xl font-normal leading-tight" id="detail-title"></h2>
+      <div class="my-4 flex flex-wrap gap-1.5" id="detail-meta"></div>
+      <p class="line-clamp-5 text-xs leading-6 text-subtle" id="detail-copy"></p>
+      <div class="mt-5 grid grid-cols-[1fr_3.25rem] gap-2">
+        <button class="flex min-h-13 items-center justify-between rounded-xl bg-accent px-4 text-xs font-bold text-on-accent disabled:opacity-60" id="get-movie" type="button">Get movie · ရုပ်ရှင်ရယူရန် <span class="text-lg">→</span></button>
+        <button class="favorite-button rounded-xl border border-line bg-transparent text-2xl text-subtle" id="favorite-movie" type="button" aria-label="Add to favorites">♡</button>
       </div>
     </div>
   </dialog>
 
-  <dialog class="join-dialog" id="join-dialog">
-    <button class="sheet-close" type="button" data-close="join-dialog" aria-label="Close">×</button>
-    <div class="lock-mark" aria-hidden="true">⌁</div>
-    <p class="eyebrow">ONE STEP LEFT</p>
-    <h2>Join to unlock</h2>
-    <p>Join our official channel. Your movie will be delivered automatically when Telegram verifies your membership.<br><br><span lang="my">တရားဝင်ချန်နယ်သို့ ဝင်ရောက်ပါ။ Telegram က အဖွဲ့ဝင်ဖြစ်မှုကို အတည်ပြုပြီးသည်နှင့် ရုပ်ရှင်ကို အလိုအလျောက် ပို့ပေးပါမည်။</span></p>
-    <a class="primary-action" id="join-channel" href="#">Join · ချန်နယ်ဝင်ရန် <span>↗</span></a>
-    <button class="secondary-action" id="check-again" type="button">Check again · ပြန်စစ်ရန်</button>
+  <dialog class="m-auto w-[calc(100%-2rem)] max-w-sm rounded-3xl border border-line bg-surface p-6 text-center text-ink shadow-float backdrop:bg-black/75" id="join-dialog">
+    <button class="absolute right-3 top-3 grid size-9 place-items-center rounded-full border border-line bg-app/70 text-xl" type="button" data-close="join-dialog" aria-label="Close">×</button>
+    <div class="mx-auto mb-5 grid size-14 place-items-center rounded-2xl bg-accent text-2xl text-on-accent" aria-hidden="true">⌁</div>
+    <p class="mb-2 text-[9px] font-bold uppercase tracking-[.22em] text-accent">ONE STEP LEFT</p>
+    <h2 class="m-0 font-display text-3xl font-normal">Join to unlock</h2>
+    <p class="my-4 text-xs leading-6 text-subtle">Join our official channel. Delivery starts automatically after verification.<br><br><span lang="my">တရားဝင်ချန်နယ်သို့ ဝင်ပါ။ အတည်ပြုပြီးသည်နှင့် အလိုအလျောက် ပို့ပေးပါမည်။</span></p>
+    <a class="mt-5 flex min-h-12 items-center justify-between rounded-xl bg-accent px-4 text-xs font-bold text-on-accent no-underline" id="join-channel" href="#">Join · ချန်နယ်ဝင်ရန် <span class="text-lg">↗</span></a>
+    <button class="mt-2 min-h-12 w-full rounded-xl border border-line bg-transparent text-xs font-bold text-ink" id="check-again" type="button">Check again · ပြန်စစ်ရန်</button>
   </dialog>
 
-  <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="/static/app.js"></script>
+  <div class="toast pointer-events-none fixed inset-x-5 bottom-[calc(6.5rem+env(safe-area-inset-bottom))] z-50 mx-auto max-w-sm translate-y-2 rounded-xl bg-ink px-4 py-3 text-center text-xs text-app opacity-0 shadow-float transition" id="toast" role="status" aria-live="polite"></div>
 </body>
 </html>

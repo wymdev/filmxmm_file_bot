@@ -102,6 +102,7 @@ class MiniAppHttpTests(unittest.IsolatedAsyncioTestCase):
 
         script = await self.client.get("/static/app.js")
         self.assertEqual(script.status, 200)
+        self.assertIn("max-age", script.headers["Cache-Control"])
 
     async def test_movie_api_rejects_missing_telegram_init_data(self):
         response = await self.client.get("/api/movies")

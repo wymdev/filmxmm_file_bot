@@ -1,0 +1,105 @@
+@import "tailwindcss" source("./");
+
+@theme inline {
+  --color-app: var(--fx-bg);
+  --color-surface: var(--fx-surface);
+  --color-elevated: var(--fx-elevated);
+  --color-ink: var(--fx-text);
+  --color-subtle: var(--fx-muted);
+  --color-accent: var(--fx-accent);
+  --color-on-accent: var(--fx-accent-text);
+  --color-line: var(--fx-border);
+  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-display: Georgia, "Times New Roman", serif;
+  --shadow-float: 0 24px 80px rgb(0 0 0 / 0.28);
+}
+
+:root {
+  color-scheme: light dark;
+  --fx-bg: var(--tg-theme-bg-color, #09090b);
+  --fx-surface: var(--tg-theme-secondary-bg-color, #151518);
+  --fx-elevated: color-mix(in srgb, var(--fx-surface) 88%, var(--fx-text) 12%);
+  --fx-text: var(--tg-theme-text-color, #f7f7f5);
+  --fx-muted: var(--tg-theme-hint-color, #95949d);
+  --fx-accent: var(--tg-theme-button-color, #f5b84b);
+  --fx-accent-text: var(--tg-theme-button-text-color, #17120a);
+  --fx-border: color-mix(in srgb, var(--fx-text) 11%, transparent);
+}
+
+@layer base {
+  html { background: var(--fx-bg); }
+  body {
+    min-width: 320px;
+    background:
+      radial-gradient(circle at 92% -8%, color-mix(in srgb, var(--fx-accent) 16%, transparent), transparent 30rem),
+      var(--fx-bg);
+    color: var(--fx-text);
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+  button, a, input, select { touch-action: manipulation; }
+  dialog::backdrop { background: rgb(0 0 0 / .76); backdrop-filter: blur(8px); }
+}
+
+@layer components {
+  .glass-bar {
+    background: color-mix(in srgb, var(--fx-surface) 90%, transparent);
+    border-color: var(--fx-border);
+    backdrop-filter: blur(22px) saturate(150%);
+  }
+
+  .poster-art {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    background:
+      radial-gradient(circle at 75% 20%, color-mix(in srgb, var(--fx-accent) 32%, transparent), transparent 32%),
+      linear-gradient(145deg, color-mix(in srgb, var(--fx-accent) 18%, #1c1c22), #0d0d11 72%);
+  }
+  .poster-art::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    width: 120%;
+    aspect-ratio: 1;
+    top: 16%;
+    right: -55%;
+    border: 1px solid color-mix(in srgb, var(--fx-accent) 34%, transparent);
+    border-radius: 9999px;
+  }
+  .poster-art::after {
+    content: "FILMX";
+    position: absolute;
+    top: .8rem;
+    left: .8rem;
+    color: color-mix(in srgb, var(--fx-text) 36%, transparent);
+    font-size: .48rem;
+    font-weight: 700;
+    letter-spacing: .22em;
+  }
+
+  .filter-chip[aria-pressed="true"] {
+    border-color: var(--fx-accent);
+    background: var(--fx-accent);
+    color: var(--fx-accent-text);
+  }
+  .nav-button.active { color: var(--fx-accent); }
+  .favorite-button.active { border-color: var(--fx-accent); color: var(--fx-accent); }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .loading-dot { animation: loading-pulse .9s infinite alternate ease-in-out; }
+  .loading-dot:nth-child(2) { animation-delay: .15s; }
+  .loading-dot:nth-child(3) { animation-delay: .3s; }
+}
+
+@keyframes loading-pulse {
+  to { opacity: .2; transform: translateY(-5px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}

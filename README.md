@@ -128,6 +128,18 @@ Use `/pbatch` instead of `/batch` to protect the delivered files from forwarding
 
 The bot hosts the Mini App and API in its own process. Telegram `initData` is HMAC-validated on the server; browser-provided user IDs are never trusted. Pending movie requests are stored in MongoDB and claimed atomically, so a `chat_member` update and the fallback button cannot deliver the same request twice.
 
+### Mini App frontend development
+
+The Mini App uses semantic HTML5, vanilla JavaScript, and Tailwind CSS. Tailwind is compiled ahead of time, so production loads a small static stylesheet without a browser-side Tailwind runtime:
+
+```bash
+npm install
+npm run build:css
+npm run check:js
+```
+
+Commit the generated `miniapp/styles.css` with frontend changes. Node.js is only required while developing the UI; the deployed Python process serves the compiled assets directly.
+
 See [.env.example](.env.example) for a minimal working configuration.
 
 ### Extra Variables

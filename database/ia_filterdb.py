@@ -74,31 +74,30 @@ async def get_search_results(
 ):
     """For given query return (results, next_offset)"""
 
-    query = query.strip()
-    #if filter:
-        #better ?
-        #query = query.replace(' ', r'(\s|\.|\+|\-|_)')
-        #raw_pattern = r'(\s|_|\-|\.|\+)' + query + r'(\s|_|\-|\.|\+)'
-    if not query:
-        raw_pattern = None
-    elif ' ' not in query:
-        raw_pattern = r'(\b|[\.\+\-_])' + query + r'(\b|[\.\+\-_])'
-    else:
-        raw_pattern = query.replace(' ', r'.*[\s\.\+\-_]')
-    
-    try:
-        regex = re.compile(raw_pattern, flags=re.IGNORECASE) if raw_pattern else None
-    except re.error:
-        return []
+    query = query.strip()[:160]
+    # Treat quoted phrases as one term and require every term to match either
+    # the filename or caption. Escaping each term prevents regex injection and
+    # makes searches such as "movie 2025 1080p" order-independent.
+    terms = [
+        (quoted or word).strip()
+        for quoted, word in re.findall(r'"([^"]+)"|(\S+)', query)
+        if (quoted or word).strip()
+    ][:8]
 
-    if regex is None:
+    if not terms:
         # An empty browse query means every indexed record, including Telegram
         # videos that do not have a file_name.
         filter = {}
-    elif USE_CAPTION_FILTER or include_caption:
-        filter = {'$or': [{'file_name': regex}, {'caption': regex}]}
     else:
-        filter = {'file_name': regex}
+        clauses = []
+        for term in terms:
+            pattern = re.escape(term).replace(r'\ ', r'[\s.\+_-]+')
+            regex = re.compile(pattern, flags=re.IGNORECASE)
+            if USE_CAPTION_FILTER or include_caption:
+                clauses.append({'$or': [{'file_name': regex}, {'caption': regex}]})
+            else:
+                clauses.append({'file_name': regex})
+        filter = clauses[0] if len(clauses) == 1 else {'$and': clauses}
 
     if file_type:
         filter['file_type'] = file_type
@@ -106,7 +105,7 @@ async def get_search_results(
     total_results = await Media.count_documents(filter)
     next_offset = offset + max_results
 
-    if next_offset > total_results:
+    if next_offset >= total_results:
         next_offset = ''
 
     cursor = Media.find(filter)

@@ -85,6 +85,16 @@ async def telegram_auth(request, handler):
     return await handler(request)
 
 
+@web.middleware
+async def cache_headers(request, handler):
+    response = await handler(request)
+    if request.path.startswith("/static/"):
+        response.headers["Cache-Control"] = "public, max-age=86400"
+    elif request.path == "/" or request.path.startswith("/api/"):
+        response.headers["Cache-Control"] = "no-store"
+    return response
+
+
 def _movie_json(movie, favorite_ids=()):
     name = (movie.file_name or "").strip()
     if not name:
@@ -147,12 +157,19 @@ async def movies_handler(request):
     user_id = request["telegram_user"]["id"]
     profile = await get_profile(user_id)
     query = request.query.get("q", "").strip()
+    quality = request.query.get("quality", "").strip().lower()
+    if quality in {"2160p", "1080p", "720p", "480p"}:
+        query = f"{query} {quality}".strip()
+    file_type = request.query.get("type", "").strip().lower()
+    if file_type not in {"video", "document", "audio"}:
+        file_type = None
     try:
         offset = max(0, int(request.query.get("offset", 0)))
     except ValueError:
         offset = 0
     movies, next_offset, total = await get_search_results(
         query,
+        file_type=file_type,
         max_results=24,
         offset=offset,
         filter=True,
@@ -251,7 +268,7 @@ async def health_handler(request):
 
 
 def create_miniapp(bot):
-    app = web.Application(middlewares=[telegram_auth])
+    app = web.Application(middlewares=[telegram_auth, cache_headers])
     app[BOT_KEY] = bot
     app.router.add_get("/", index_handler)
     app.router.add_get("/health", health_handler)
