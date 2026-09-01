@@ -6,99 +6,99 @@ def bilingual(english, myanmar):
 
 
 DATABASE_UNAVAILABLE = bilingual(
-    "The database is temporarily unavailable. Please try again in a few minutes.",
-    "ဒေတာဘေ့စ်ကို ယာယီအသုံးပြု၍ မရသေးပါ။ မိနစ်အနည်းငယ်ကြာပြီးနောက် ထပ်မံကြိုးစားပါ။",
+    "Give me a moment — the database's taking a quick breather. Try again in a few minutes!",
+    "ခဏစောင့်ပေးပါနော် — ဒေတာဘေ့စ်က ခဏငြိနေလို့ပါ။ မိနစ်အနည်းငယ်ကြာရင် ပြန်စမ်းကြည့်ပါ!",
 )
 PREPARING_FILES = bilingual(
-    "Preparing your files…",
-    "သင့်ဖိုင်များကို ပြင်ဆင်နေပါသည်…",
+    "Getting your files ready…",
+    "သင့်ဖိုင်တွေကို ပြင်ဆင်နေပါတယ်နော်…",
 )
 BATCH_INVALID = bilingual(
-    "This batch link is invalid or has expired.",
-    "ဤ batch လင့်ခ်သည် မမှန်ကန်ပါ သို့မဟုတ် သက်တမ်းကုန်သွားပါပြီ။",
+    "This link looks broken or has expired.",
+    "ဒီလင့်ခ်က မမှန်ကန်တော့ဘူး၊ ဒါမှမဟုတ် သက်တမ်းကုန်သွားပြီနော်။",
 )
 BATCH_EMPTY = bilingual(
-    "This batch does not contain any files.",
-    "ဤ batch တွင် ဖိုင်မရှိပါ။",
+    "Hmm, there aren't any files in this batch.",
+    "ဟင်… ဒီ batch ထဲမှာ ဖိုင်တွေ မရှိဘူးနော်။",
 )
 SOURCE_UNAVAILABLE = bilingual(
-    "I could not read the source channel for this batch.",
-    "ဤ batch ၏ မူရင်းချန်နယ်ကို ဖတ်ရှု၍ မရပါ။",
+    "I couldn't reach the source channel for this batch.",
+    "ဒီ batch ရဲ့ မူရင်းချန်နယ်ကို ဖတ်လို့မရဘူးနော်။",
 )
 NO_MESSAGES = bilingual(
-    "No messages were found in this batch.",
-    "ဤ batch တွင် မက်ဆေ့ချ်များ မတွေ့ပါ။",
+    "No messages turned up in this batch.",
+    "ဒီ batch ထဲမှာ မက်ဆေ့ချ်တွေ မတွေ့ဘူးနော်။",
 )
 NO_SUCH_FILE = bilingual(
-    "This file could not be found. It may have been removed or expired.",
-    "ဤဖိုင်ကို ရှာမတွေ့ပါ။ ဖယ်ရှားထားခြင်း သို့မဟုတ် သက်တမ်းကုန်ခြင်း ဖြစ်နိုင်ပါသည်။",
+    "Couldn't find that file — it may have been removed or its link expired.",
+    "ဒီဖိုင်ကို ရှာမတွေ့ဘူးနော် — ဖျက်ထားလိုက်တာ ဒါမှမဟုတ် သက်တမ်းကုန်သွားတာ ဖြစ်နိုင်ပါတယ်။",
 )
-PROCESSING = bilingual("Processing… ⏳", "လုပ်ဆောင်နေပါသည်… ⏳")
+PROCESSING = bilingual("Working on it… ⏳", "လုပ်ဆောင်နေပါတယ်နော်… ⏳")
 JOIN_LOOKUP_FAILED = bilingual(
-    "I couldn't open the required channel right now. Please try again shortly.",
-    "လိုအပ်သောချန်နယ်ကို ယခုဖွင့်၍ မရသေးပါ။ ခဏကြာပြီးနောက် ထပ်မံကြိုးစားပါ။",
+    "I couldn't reach the channel right now — give it another try in a bit.",
+    "အခုချိန်မှာ လိုအပ်တဲ့ချန်နယ်ကို ဖွင့်လို့မရသေးဘူး — ခဏနေရင် ထပ်စမ်းကြည့်ပါနော်။",
 )
 JOIN_REQUIRED_ALERT = bilingual(
-    "❌ Please join the channel first.",
-    "❌ ကျေးဇူးပြု၍ ချန်နယ်သို့ အရင်ဝင်ပါ။",
+    "❌ Join the channel first, then try again!",
+    "❌ ချန်နယ်ကို အရင်ဝင်ပါဦးနော်။",
 )
 REQUEST_FINISHED = bilingual(
-    "This request was already delivered or has expired.",
-    "ဤတောင်းဆိုမှုကို ပို့ပြီးသား သို့မဟုတ် သက်တမ်းကုန်သွားပါပြီ။",
+    "This one's already been delivered, or the request expired.",
+    "ဒီတောင်းဆိုမှုကို ပို့ပြီးသားပါ၊ ဒါမှမဟုတ် သက်တမ်းကုန်သွားပြီနော်။",
 )
 MEMBERSHIP_VERIFIED = bilingual(
-    "✅ Membership verified!\n\n🎬 Sending your movie…",
-    "✅ အဖွဲ့ဝင်ဖြစ်မှု အတည်ပြုပြီးပါပြီ။\n\n🎬 သင့်ရုပ်ရှင်ကို ပို့နေပါသည်…",
+    "✅ You're in!\n\n🎬 Sending your movie…",
+    "✅ အဖွဲ့ဝင်ဖြစ်ကြောင်း အတည်ပြုပြီးပါပြီ!\n\n🎬 သင့်ရုပ်ရှင်ကို ပို့နေပါပြီနော်…",
 )
 MEMBERSHIP_VERIFIED_SHORT = bilingual(
-    "Membership verified — sending your movie.",
-    "အဖွဲ့ဝင်ဖြစ်မှု အတည်ပြုပြီးပါပြီ — ရုပ်ရှင်ပို့နေပါသည်။",
+    "You're verified — your movie's on its way!",
+    "အတည်ပြုပြီးပါပြီ — ရုပ်ရှင်ရောက်တော့မယ်နော်!",
 )
 FORCE_JOIN_TEXT = (
-    "<b>🔐 One Step Left</b>\n\n"
-    "Join our official channel to unlock this movie.\n\n"
-    "✨ After joining, the bot will automatically send your movie.\n\n"
-    "<b>🇲🇲 နောက်ဆုံးတစ်ဆင့်သာ ကျန်ပါသည်</b>\n\n"
-    "ဤရုပ်ရှင်ကို ရယူရန် ကျွန်ုပ်တို့၏ တရားဝင်ချန်နယ်သို့ ဝင်ရောက်ပါ။\n\n"
-    "✨ ဝင်ရောက်ပြီးသည်နှင့် bot က သင့်ရုပ်ရှင်ကို အလိုအလျောက် ပို့ပေးပါမည်။"
+    "<b>🔐 Almost there!</b>\n\n"
+    "Just join our official channel and this movie is all yours.\n\n"
+    "✨ Once you've joined, I'll send it your way automatically.\n\n"
+    "<b>🇲🇲 နောက်တစ်ဆင့်ပဲ ကျန်တော့တယ်!</b>\n\n"
+    "ကျွန်တော်တို့ရဲ့ တရားဝင်ချန်နယ်ကို ဝင်လိုက်ရုံနဲ့ ဒီရုပ်ရှင်ကို ရရှိပါပြီ။\n\n"
+    "✨ ဝင်ပြီးတာနဲ့ ရုပ်ရှင်ကို အလိုအလျောက် ပို့ပေးပါ့မယ်နော်။"
 )
 DELETE_REPLY_REQUIRED = bilingual(
-    "Reply to the file you want to delete with /delete.",
-    "ဖျက်လိုသောဖိုင်ကို reply လုပ်ပြီး /delete ပို့ပါ။",
+    "Reply to the file you'd like removed with /delete.",
+    "ဖျက်ချင်တဲ့ ဖိုင်ကို reply လုပ်ပြီး /delete လို့ ပို့ပါနော်။",
 )
 UNSUPPORTED_FILE = bilingual(
-    "This file format is not supported.",
-    "ဤဖိုင်အမျိုးအစားကို မပံ့ပိုးပါ။",
+    "Sorry, this file type isn't supported.",
+    "စိတ်မကောင်းပါဘူး၊ ဒီဖိုင်အမျိုးအစားကို ပံ့ပိုးမထားသေးပါဘူး။",
 )
 FILE_DELETED = bilingual(
-    "The file was deleted from the database.",
-    "ဖိုင်ကို ဒေတာဘေ့စ်မှ ဖျက်ပြီးပါပြီ။",
+    "Done — that file's been removed from the database.",
+    "ပြီးပါပြီ — ဒီဖိုင်ကို ဒေတာဘေ့စ်ကနေ ဖျက်လိုက်ပါပြီ။",
 )
 FILE_NOT_IN_DATABASE = bilingual(
-    "The file was not found in the database.",
-    "ဖိုင်ကို ဒေတာဘေ့စ်တွင် မတွေ့ပါ။",
+    "Couldn't find that file in the database.",
+    "ဒီဖိုင်ကို ဒေတာဘေ့စ်ထဲမှာ ရှာမတွေ့ပါဘူး။",
 )
 DELETE_ALL_CONFIRM = bilingual(
-    "This will delete every indexed file. Do you want to continue?",
-    "မှတ်တမ်းတင်ထားသောဖိုင်အားလုံးကို ဖျက်ပါမည်။ ဆက်လုပ်လိုပါသလား။",
+    "Heads up — this wipes every indexed file. Still want to go ahead?",
+    "သတိပေးချက် — ဒါက မှတ်တမ်းတင်ထားသမျှ ဖိုင်အားလုံးကို ဖျက်ပစ်ပါမယ်။ ဆက်လုပ်ချင်သေးလား?",
 )
 FILES_DELETED = bilingual(
-    "All indexed files were deleted successfully.",
-    "မှတ်တမ်းတင်ထားသောဖိုင်အားလုံးကို အောင်မြင်စွာ ဖျက်ပြီးပါပြီ။",
+    "All done — every indexed file has been deleted.",
+    "ပြီးပါပြီ — မှတ်တမ်းတင်ထားတဲ့ ဖိုင်အားလုံးကို ဖျက်ပြီးပါပြီ။",
 )
 BOT_NOT_IN_GROUP = bilingual(
-    "Make sure the bot is present in your group and has the required permissions.",
-    "Bot သည် သင့် group ထဲတွင်ရှိပြီး လိုအပ်သော permission များ ရရှိထားကြောင်း စစ်ဆေးပါ။",
+    "Double-check that I'm in your group and have the right permissions.",
+    "Bot ကို group ထဲမှာ ထည့်ထားပြီး၊ လိုအပ်တဲ့ permission တွေ ပေးထားကြောင်း စစ်ကြည့်ပါနော်။",
 )
 NOT_CONNECTED = bilingual(
-    "I'm not connected to any groups. Use /connect in a group first.",
-    "မည်သည့် group နှင့်မျှ မချိတ်ဆက်ရသေးပါ။ Group ထဲတွင် /connect ကို အရင်အသုံးပြုပါ။",
+    "I'm not linked to any group yet — use /connect there first.",
+    "ကျွန်တော် group တစ်ခုနဲ့မှ မချိတ်ဆက်ရသေးပါဘူး — group ထဲမှာ /connect ကို အရင်သုံးပါနော်။",
 )
 GENERIC_ERROR = bilingual(
-    "Something went wrong. Please try again later.",
-    "တစ်ခုခု မှားယွင်းနေပါသည်။ ခဏကြာပြီးနောက် ထပ်မံကြိုးစားပါ။",
+    "Oops, something went wrong — try again in a bit.",
+    "အိုး၊ တစ်ခုခု မှားသွားပါပြီ — နည်းနည်းနေရင် ထပ်စမ်းကြည့်ပါနော်။",
 )
 NO_INPUT = bilingual(
-    "No input was provided.",
-    "လိုအပ်သောစာသား မထည့်ထားပါ။",
+    "Looks like you didn't type anything.",
+    "ဘာမှ မထည့်ရသေးဘူးနော်။",
 )

@@ -54,8 +54,8 @@ async def next_page(bot, query):
     search = BUTTONS.get(key)
     if not search:
         await query.answer(bilingual(
-            "This is an old message. Please send your request again.",
-            "ဤမက်ဆေ့ချ်သည် အဟောင်းဖြစ်ပါသည်။ တောင်းဆိုမှုကို ထပ်မံပို့ပါ။",
+            "This message is a bit old — send your request again.",
+            "ဒီမက်ဆေ့ချ်က ဟောင်းသွားပြီနော် — တောင်းဆိုချက်ကို ထပ်ပို့ပေးပါ။",
         ), show_alert=True)
         return
 
@@ -144,13 +144,13 @@ async def advantage_spoll_choker(bot, query):
     movies = SPELL_CHECK.get(query.message.reply_to_message.id)
     if not movies:
         return await query.answer(bilingual(
-            "This button has expired. Please search again.",
-            "ဤခလုတ်သည် သက်တမ်းကုန်သွားပါပြီ။ ထပ်မံရှာဖွေပါ။",
+            "This button's expired — search again.",
+            "ဒီခလုတ်က သက်တမ်းကုန်သွားပြီနော် — ထပ်ရှာကြည့်ပါ။",
         ), show_alert=True)
     movie = movies[(int(movie_))]
     await query.answer(bilingual(
         "Checking the movie database…",
-        "ရုပ်ရှင်ဒေတာဘေ့စ်တွင် ရှာဖွေနေပါသည်…",
+        "ရုပ်ရှင်ဒေတာဘေ့စ်ထဲမှာ ရှာနေပါတယ်နော်…",
     ))
     k = await manual_filters(bot, query.message, text=movie)
     if k == False:
@@ -160,15 +160,15 @@ async def advantage_spoll_choker(bot, query):
             await auto_filter(bot, query, k)
         else:
             k = await query.message.edit(
-                "<b>📍 Movie not available</b>\n\n"
-                "1. The OTT/DVD may not be released yet.\n"
-                "2. Search using the movie name and year.\n"
-                "3. Request unavailable movies in our other group.\n\n"
-                "<b>🇲🇲 ရုပ်ရှင်မရရှိနိုင်ပါ</b>\n\n"
-                "၁။ OTT/DVD မထွက်သေးခြင်း ဖြစ်နိုင်ပါသည်။\n"
-                "၂။ ရုပ်ရှင်အမည်နှင့် ခုနှစ်ကို တွဲ၍ ရှာပါ။\n"
-                "၃။ မရှိသေးသောရုပ်ရှင်ကို အခြား group တွင် တောင်းဆိုနိုင်ပါသည်။\n\n"
-                "<a href='https://t.me/Group_Linkzzzz'>Our Groups · ကျွန်ုပ်တို့၏ Group များ</a>"
+                "<b>📍 Couldn't find that one yet</b>\n\n"
+                "1. It might not be out on OTT/DVD just yet.\n"
+                "2. Try searching with the movie name plus the year.\n"
+                "3. Still missing? Request it in our other group.\n\n"
+                "<b>🇲🇲 ဒီရုပ်ရှင်ကို မတွေ့သေးဘူးနော်</b>\n\n"
+                "၁။ OTT/DVD မထွက်သေးလို့ ဖြစ်နိုင်ပါတယ်။\n"
+                "၂။ ရုပ်ရှင်အမည်နဲ့ ခုနှစ်ကို တွဲပြီး ထပ်ရှာကြည့်ပါနော်။\n"
+                "၃။ ဒါမှမဟုတ် အခြား group မှာ တောင်းဆိုလို့ရပါတယ်။\n\n"
+                "<a href='https://t.me/Group_Linkzzzz'>Our Groups · ကျွန်တော်တို့ Group များ</a>"
             )
             await asyncio.sleep(10)
             await k.delete()
@@ -211,7 +211,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
         else:
             await query.answer(bilingual(
                 "Only the group owner or an authorized user can do that.",
-                "Group ပိုင်ရှင် သို့မဟုတ် ခွင့်ပြုထားသော user သာ ဤလုပ်ဆောင်ချက်ကို အသုံးပြုနိုင်ပါသည်။",
+                "ဒါကို Group ပိုင်ရှင် ဒါမှမဟုတ် ခွင့်ပြုထားတဲ့ user ပဲ လုပ်လို့ရပါတယ်နော်။",
             ), show_alert=True)
     elif query.data == "delallcancel":
         userid = query.from_user.id
@@ -232,8 +232,8 @@ async def cb_handler(client: Client, query: CallbackQuery):
                     logger.debug("Could not remove delete-filter prompt", exc_info=True)
             else:
                 await query.answer(bilingual(
-                    "You are not allowed to use this action.",
-                    "ဤလုပ်ဆောင်ချက်ကို အသုံးပြုခွင့် မရှိပါ။",
+                    "You're not allowed to do that.",
+                    "ဒါကို လုပ်ပိုင်ခွင့် မရှိပါဘူးနော်။",
                 ), show_alert=True)
     elif "groupcb" in query.data:
         await query.answer()
@@ -405,13 +405,13 @@ async def cb_handler(client: Client, query: CallbackQuery):
                 )
                 await schedule_auto_delete(query.from_user.id, sent_msg.id)
                 await query.answer(bilingual(
-                    "The file was sent to your private chat.",
-                    "ဖိုင်ကို သင့် private chat သို့ ပို့ပြီးပါပြီ။",
+                    "Sent it to your private chat!",
+                    "ဖိုင်ကို သင့် private chat ထဲ ပို့ပြီးပါပြီနော်!",
                 ), show_alert=True)
         except UserIsBlocked:
             await query.answer(bilingual(
-                "Please unblock the bot first.",
-                "ကျေးဇူးပြု၍ bot ကို အရင် unblock လုပ်ပါ။",
+                "Please unblock the bot first, then try again.",
+                "Bot ကို အရင် unblock လုပ်ပေးပါဦးနော်၊ ပြီးရင် ထပ်စမ်းကြည့်ပါ။",
             ), show_alert=True)
         except PeerIdInvalid:
             await query.answer(url=f"https://t.me/{temp.U_NAME}?start={ident}_{file_id}")
@@ -657,8 +657,8 @@ async def cb_handler(client: Client, query: CallbackQuery):
 
         if str(grp_id) != str(grpid):
             await query.message.edit(bilingual(
-                "Your active connection changed. Open /settings again.",
-                "လက်ရှိချိတ်ဆက်မှု ပြောင်းလဲသွားပါပြီ။ /settings ကို ပြန်ဖွင့်ပါ။",
+                "Your active connection changed — open /settings again.",
+                "လက်ရှိချိတ်ဆက်မှု ပြောင်းသွားပါပြီနော် — /settings ကို ပြန်ဖွင့်ပါ။",
             ))
             return await query.answer('Piracy Is Crime')
 
@@ -842,10 +842,10 @@ async def advantage_spell_chok(msg):
     gs_parsed = []
     if not g_s:
         k = await msg.reply(
-            "<b>I couldn't find that title.</b>\n"
+            "<b>Couldn't find that title, sorry!</b>\n"
             "<a href='https://t.me/Group_Linkzzzz'>Check our other groups</a>\n\n"
-            "<b>🇲🇲 ထိုအမည်ဖြင့် ရှာမတွေ့ပါ။</b>\n"
-            "<a href='https://t.me/Group_Linkzzzz'>အခြား group များတွင် ရှာကြည့်ပါ</a>"
+            "<b>🇲🇲 ဒီအမည်ကို ရှာမတွေ့ဘူးနော်</b>\n"
+            "<a href='https://t.me/Group_Linkzzzz'>အခြား group တွေမှာ ရှာကြည့်ပါ</a>"
         )
         await asyncio.sleep(8)
         await k.delete()
@@ -876,8 +876,8 @@ async def advantage_spell_chok(msg):
     movielist = list(dict.fromkeys(movielist))  # removing duplicates
     if not movielist:
         k = await msg.reply(bilingual(
-            "I couldn't find anything related. Check the spelling and try again.",
-            "ဆက်စပ်သောရလဒ် မတွေ့ပါ။ စာလုံးပေါင်းစစ်ပြီး ထပ်မံရှာဖွေပါ။",
+            "Nothing close turned up — double-check the spelling and try again.",
+            "ဆက်စပ်တာ တစ်ခုမှ မတွေ့ဘူးနော် — စာလုံးပေါင်း ပြန်စစ်ပြီး ထပ်ရှာကြည့်ပါ။",
         ))
         await asyncio.sleep(8)
         await k.delete()
@@ -890,7 +890,7 @@ async def advantage_spell_chok(msg):
         )
     ] for k, movie in enumerate(movielist)]
     btn.append([InlineKeyboardButton(text="Close", callback_data=f'spolling#{user}#close_spellcheck')])
-    await msg.reply("<b><i>I couldn't find an exact match. Did you mean one of these?\n\n🇲🇲 အတိအကျ ကိုက်ညီသောရလဒ် မတွေ့ပါ။ အောက်ပါရုပ်ရှင်များထဲမှ တစ်ခုကို ဆိုလိုပါသလား။</i></b>",
+    await msg.reply("<b><i>No exact match — did you mean one of these?\n\n🇲🇲 အတိအကျ ကိုက်ညီတာ မတွေ့ဘူးနော် — အောက်က ရုပ်ရှင်တွေထဲက တစ်ခုခုလား?</i></b>",
                     reply_markup=InlineKeyboardMarkup(btn))
 
 

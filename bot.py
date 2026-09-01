@@ -201,15 +201,15 @@ class Bot(Client):
                             await self.send_message(
                                 chat_id=entry['chat_id'],
                                 text=(
-                                    "<b>⚠️ Copyright Notice</b>\n\n"
-                                    "The file you requested has been <b>automatically deleted</b> "
-                                    "due to <b>DMCA / Copyright</b> compliance.\n\n"
-                                    "📌 <i>If you need the file again, please request it once more from the channel.</i>\n\n"
-                                    "🔒 <b>Note:</b> All files are auto-deleted after 5 hours to comply with copyright regulations.\n\n"
-                                    "<b>🇲🇲 မူပိုင်ခွင့် သတိပေးချက်</b>\n\n"
-                                    "သင်တောင်းဆိုထားသောဖိုင်ကို မူပိုင်ခွင့်စည်းမျဉ်းများအရ အလိုအလျောက် ဖျက်ပြီးပါပြီ။\n\n"
-                                    "📌 ဖိုင်လိုအပ်ပါက ချန်နယ်မှ ထပ်မံတောင်းဆိုပါ။\n\n"
-                                    "🔒 <b>မှတ်ချက်:</b> မူပိုင်ခွင့်စည်းမျဉ်းများအရ ဖိုင်အားလုံးကို ၅ နာရီအကြာတွင် အလိုအလျောက် ဖျက်ပါသည်။"
+                                    "<b>⏰ Time's up!</b>\n\n"
+                                    "The file you got has been <b>auto-deleted</b> — that's just how we keep "
+                                    "things copyright-safe.\n\n"
+                                    "📌 <i>Need it again? Just request it once more from the channel.</i>\n\n"
+                                    "🔒 <b>Note:</b> Every file auto-deletes 5 hours after delivery for copyright reasons.\n\n"
+                                    "<b>🇲🇲 အချိန်ကုန်သွားပါပြီ!</b>\n\n"
+                                    "သင်ရရှိထားတဲ့ ဖိုင်ကို <b>အလိုအလျောက် ဖျက်ပစ်လိုက်ပါပြီ</b> — မူပိုင်ခွင့်စည်းမျဉ်း လိုက်နာဖို့ လိုအပ်လို့ပါနော်။\n\n"
+                                    "📌 <i>ထပ်လိုအပ်ရင် ချန်နယ်ကနေ ထပ်တောင်းလိုက်ရုံပါပဲ။</i>\n\n"
+                                    "🔒 <b>မှတ်ချက်:</b> ဖိုင်တိုင်းကို ပို့ပြီး ၅ နာရီအကြာမှာ မူပိုင်ခွင့်အရ အလိုအလျောက် ဖျက်ပါတယ်နော်။"
                                 ),
                                 parse_mode=enums.ParseMode.HTML
                             )
