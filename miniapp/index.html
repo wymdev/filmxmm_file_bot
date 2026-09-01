@@ -6,12 +6,9 @@
   <meta name="theme-color" content="#101114">
   <meta name="description" content="Search the FilmX movie library and receive movies in Telegram.">
   <title>FilmX</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,420;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/styles.css?v=4">
+  <link rel="stylesheet" href="/static/styles.css?v=5">
   <script defer src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script defer src="/static/app.js?v=4"></script>
+  <script defer src="/static/app.js?v=5"></script>
 </head>
 <body class="m-0 min-h-dvh bg-app font-sans text-ink selection:bg-accent selection:text-on-accent">
   <div class="mx-auto min-h-dvh max-w-5xl pb-[calc(7rem+env(safe-area-inset-bottom))]">
@@ -27,13 +24,11 @@
     </header>
 
     <main class="px-5 sm:px-8">
-      <section class="relative overflow-hidden py-10 sm:py-16" id="hero">
-        <div class="pointer-events-none absolute -right-16 top-0 size-56 rounded-full border border-accent/25 sm:size-72" aria-hidden="true"></div>
-        <div class="pointer-events-none absolute -right-24 top-16 size-40 rounded-full bg-accent-2/10 blur-3xl sm:size-56" aria-hidden="true"></div>
-        <div class="relative max-w-2xl">
+      <section class="py-10 sm:py-16" id="hero">
+        <div class="max-w-2xl">
           <p class="mb-3 text-[10px] font-bold uppercase tracking-[.24em] text-accent">FILMX COLLECTION</p>
           <h1 class="m-0 font-display text-5xl font-normal leading-[.92] tracking-[-.055em] text-ink sm:text-7xl">
-            Find your next<br><em class="gradient-text font-normal not-italic">great story.</em>
+            Find your next<br><em class="font-normal not-italic text-accent">great story.</em>
           </h1>
           <p class="mt-5 max-w-lg text-sm leading-6 text-subtle">
             Search fast. Unlock once. Receive your movie directly in Telegram.<br>
@@ -86,7 +81,7 @@
         <button class="mt-8 min-h-12 w-full rounded-xl border border-line bg-surface px-4 py-2.5 text-xs font-bold leading-relaxed text-ink transition hover:border-accent hover:text-accent disabled:opacity-50" id="load-more" type="button" hidden>Load more · <span lang="my">နောက်ထပ်ကြည့်ရန်</span></button>
 
         <div class="py-14 text-center" id="empty-state" hidden>
-          <span class="gradient-text font-display text-6xl" aria-hidden="true">◌</span>
+          <span class="font-display text-6xl text-accent" aria-hidden="true">◌</span>
           <h3 class="mb-1 mt-2 font-display text-2xl font-normal">Nothing found · <span lang="my">မတွေ့ပါ</span></h3>
           <p class="m-0 text-xs leading-5 text-subtle">Try fewer words or remove a quality filter.<br><span lang="my">စာလုံးနည်းနည်းဖြင့်ရှာပါ သို့မဟုတ် quality filter ကို ဖြုတ်ပါ။</span></p>
         </div>
@@ -107,7 +102,7 @@
 
   <dialog class="m-auto mb-2 max-h-[90dvh] w-[calc(100%-1rem)] max-w-lg overflow-auto rounded-3xl border border-line bg-surface p-0 text-ink shadow-float backdrop:bg-black/75" id="movie-sheet">
     <button class="absolute right-3 top-3 z-10 grid size-9 place-items-center rounded-full border border-line bg-app/80 text-xl backdrop-blur" type="button" data-close="movie-sheet" aria-label="Close">×</button>
-    <div class="poster-art grid h-56 place-items-center" id="detail-poster"><span class="gradient-text font-display text-6xl italic">FX</span></div>
+    <div class="poster-art grid h-56 place-items-center" id="detail-poster"><span class="font-display text-6xl italic text-accent">FX</span></div>
     <div class="p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:p-7">
       <p class="mb-2 text-[9px] font-bold uppercase tracking-[.22em] text-accent">NOW SELECTED</p>
       <h2 class="m-0 font-display text-3xl font-normal leading-tight" id="detail-title"></h2>
