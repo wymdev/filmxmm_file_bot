@@ -79,7 +79,7 @@
     article.setAttribute("aria-label", `Open ${movie.title}`);
     article.innerHTML = `
       <div class="poster-art flex aspect-[2/2.85] items-end rounded-2xl p-3 transition duration-300 group-hover:-translate-y-1 group-hover:shadow-float">
-        <span class="poster-letter relative z-10 font-display text-5xl italic leading-none text-accent/80"></span>
+        <span class="poster-letter gradient-text relative z-10 font-display text-5xl italic leading-none"></span>
         <span class="quality absolute bottom-2.5 right-2.5 z-10 rounded-md bg-app/75 px-1.5 py-1 text-[8px] font-bold uppercase tracking-wider text-ink backdrop-blur"></span>
       </div>
       <div class="pt-2.5 pr-7">
@@ -114,6 +114,7 @@
     empty.hidden = state.movies.length > 0;
     $("#result-count").textContent = state.total ? `${state.movies.length} / ${state.total}` : "";
     $("#library-total").textContent = state.total ? `${state.total} movies` : "Movie library";
+    $("#library-total-count").textContent = state.total ? state.total.toLocaleString() : "—";
     $("#load-more").hidden = state.nextOffset === null;
     setSearchStatus();
   }
@@ -224,7 +225,7 @@
     if (!state.selected) return;
     const button = $("#get-movie");
     button.disabled = true;
-    button.firstChild.textContent = "Checking · စစ်ဆေးနေသည် ";
+    $("#get-movie-label").textContent = "Checking · စစ်ဆေးနေသည် ";
     try {
       const result = await api(`/api/movies/${state.selected.id}/request`, { method: "POST" });
       if (result.status === "join_required") {
@@ -239,7 +240,7 @@
     } catch (error) { toast(error.message); }
     finally {
       button.disabled = false;
-      button.firstChild.textContent = "Get movie · ရုပ်ရှင်ရယူရန် ";
+      $("#get-movie-label").textContent = "Get movie · ရုပ်ရှင်ရယူရန် ";
     }
   }
 

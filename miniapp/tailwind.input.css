@@ -7,23 +7,26 @@
   --color-ink: var(--fx-text);
   --color-subtle: var(--fx-muted);
   --color-accent: var(--fx-accent);
+  --color-accent-2: var(--fx-accent-2);
   --color-on-accent: var(--fx-accent-text);
   --color-line: var(--fx-border);
-  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-display: Georgia, "Times New Roman", serif;
-  --shadow-float: 0 24px 80px rgb(0 0 0 / 0.28);
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
+  --shadow-float: 0 24px 80px rgb(0 0 0 / 0.32);
 }
 
 :root {
   color-scheme: light dark;
-  --fx-bg: var(--tg-theme-bg-color, #09090b);
-  --fx-surface: var(--tg-theme-secondary-bg-color, #151518);
-  --fx-elevated: color-mix(in srgb, var(--fx-surface) 88%, var(--fx-text) 12%);
-  --fx-text: var(--tg-theme-text-color, #f7f7f5);
-  --fx-muted: var(--tg-theme-hint-color, #95949d);
-  --fx-accent: var(--tg-theme-button-color, #f5b84b);
-  --fx-accent-text: var(--tg-theme-button-text-color, #17120a);
-  --fx-border: color-mix(in srgb, var(--fx-text) 11%, transparent);
+  --fx-bg: var(--tg-theme-bg-color, #09090f);
+  --fx-surface: var(--tg-theme-secondary-bg-color, #14141f);
+  --fx-elevated: color-mix(in srgb, var(--fx-surface) 86%, var(--fx-text) 14%);
+  --fx-text: var(--tg-theme-text-color, #f5f4fb);
+  --fx-muted: var(--tg-theme-hint-color, #9694ab);
+  --fx-accent: var(--tg-theme-button-color, #8b5cf6);
+  --fx-accent-2: #fb64b6;
+  --fx-accent-text: var(--tg-theme-button-text-color, #ffffff);
+  --fx-border: color-mix(in srgb, var(--fx-text) 12%, transparent);
+  --fx-gradient: linear-gradient(135deg, var(--fx-accent), var(--fx-accent-2));
 }
 
 @layer base {
@@ -31,30 +34,52 @@
   body {
     min-width: 320px;
     background:
-      radial-gradient(circle at 92% -8%, color-mix(in srgb, var(--fx-accent) 16%, transparent), transparent 30rem),
+      radial-gradient(circle at 100% -10%, color-mix(in srgb, var(--fx-accent) 22%, transparent), transparent 32rem),
+      radial-gradient(circle at -10% 20%, color-mix(in srgb, var(--fx-accent-2) 14%, transparent), transparent 28rem),
       var(--fx-bg);
     color: var(--fx-text);
     -webkit-font-smoothing: antialiased;
     -webkit-tap-highlight-color: transparent;
   }
   button, a, input, select { touch-action: manipulation; }
-  dialog::backdrop { background: rgb(0 0 0 / .76); backdrop-filter: blur(8px); }
+  dialog::backdrop { background: rgb(4 2 12 / .8); backdrop-filter: blur(10px); }
+  [lang="my"] { line-height: 1.9; }
 }
 
 @layer components {
   .glass-bar {
-    background: color-mix(in srgb, var(--fx-surface) 90%, transparent);
+    background: color-mix(in srgb, var(--fx-surface) 88%, transparent);
     border-color: var(--fx-border);
-    backdrop-filter: blur(22px) saturate(150%);
+    backdrop-filter: blur(22px) saturate(160%);
   }
+
+  .gradient-text {
+    background: var(--fx-gradient);
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+  }
+
+  .brand-mark, .btn-primary, .join-cta {
+    background: var(--fx-gradient);
+    color: var(--fx-accent-text);
+  }
+
+  .btn-primary, .join-cta {
+    box-shadow: 0 12px 28px -10px color-mix(in srgb, var(--fx-accent) 65%, transparent);
+    transition: transform .2s ease, box-shadow .2s ease;
+  }
+  .btn-primary:active, .join-cta:active { transform: scale(.98); }
+  .btn-primary:disabled { box-shadow: none; }
 
   .poster-art {
     position: relative;
     isolation: isolate;
     overflow: hidden;
     background:
-      radial-gradient(circle at 75% 20%, color-mix(in srgb, var(--fx-accent) 32%, transparent), transparent 32%),
-      linear-gradient(145deg, color-mix(in srgb, var(--fx-accent) 18%, #1c1c22), #0d0d11 72%);
+      radial-gradient(circle at 80% 12%, color-mix(in srgb, var(--fx-accent-2) 38%, transparent), transparent 42%),
+      radial-gradient(circle at 8% 92%, color-mix(in srgb, var(--fx-accent) 30%, transparent), transparent 46%),
+      linear-gradient(155deg, color-mix(in srgb, var(--fx-accent) 20%, #17171f), #0b0b10 74%);
   }
   .poster-art::before {
     content: "";
@@ -62,9 +87,9 @@
     z-index: -1;
     width: 120%;
     aspect-ratio: 1;
-    top: 16%;
+    top: 14%;
     right: -55%;
-    border: 1px solid color-mix(in srgb, var(--fx-accent) 34%, transparent);
+    border: 1px solid color-mix(in srgb, var(--fx-accent-2) 38%, transparent);
     border-radius: 9999px;
   }
   .poster-art::after {
@@ -72,27 +97,38 @@
     position: absolute;
     top: .8rem;
     left: .8rem;
-    color: color-mix(in srgb, var(--fx-text) 36%, transparent);
+    color: color-mix(in srgb, var(--fx-text) 40%, transparent);
     font-size: .48rem;
     font-weight: 700;
     letter-spacing: .22em;
   }
 
   .filter-chip[aria-pressed="true"] {
-    border-color: var(--fx-accent);
-    background: var(--fx-accent);
+    border-color: transparent;
+    background: var(--fx-gradient);
     color: var(--fx-accent-text);
   }
-  .nav-button.active { color: var(--fx-accent); }
-  .favorite-button.active { border-color: var(--fx-accent); color: var(--fx-accent); }
+  .nav-button.active {
+    color: var(--fx-accent-text);
+    background: var(--fx-gradient);
+    box-shadow: 0 8px 20px -8px color-mix(in srgb, var(--fx-accent) 70%, transparent);
+  }
+  .favorite-button.active {
+    border-color: transparent;
+    background: var(--fx-gradient);
+    color: var(--fx-accent-text);
+  }
   .toast.show { opacity: 1; transform: translateY(0); }
-  .loading-dot { animation: loading-pulse .9s infinite alternate ease-in-out; }
+  .loading-dot {
+    background: var(--fx-gradient);
+    animation: loading-pulse .9s infinite alternate ease-in-out;
+  }
   .loading-dot:nth-child(2) { animation-delay: .15s; }
   .loading-dot:nth-child(3) { animation-delay: .3s; }
 }
 
 @keyframes loading-pulse {
-  to { opacity: .2; transform: translateY(-5px); }
+  to { opacity: .25; transform: translateY(-5px); }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -6,15 +6,18 @@
   <meta name="theme-color" content="#09090b">
   <meta name="description" content="Search the FilmX movie library and receive movies in Telegram.">
   <title>FilmX</title>
-  <link rel="stylesheet" href="/static/styles.css?v=3">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,420;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css?v=4">
   <script defer src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script defer src="/static/app.js?v=3"></script>
+  <script defer src="/static/app.js?v=4"></script>
 </head>
 <body class="m-0 min-h-dvh bg-app font-sans text-ink selection:bg-accent selection:text-on-accent">
   <div class="mx-auto min-h-dvh max-w-5xl pb-[calc(7rem+env(safe-area-inset-bottom))]">
     <header class="flex items-center justify-between px-5 pb-3 pt-[calc(1rem+env(safe-area-inset-top))] sm:px-8">
       <a class="flex items-center gap-2.5 text-sm font-semibold tracking-tight text-ink no-underline" href="#" aria-label="FilmX home">
-        <span class="grid size-9 place-items-center rounded-xl bg-accent font-display text-lg italic text-on-accent shadow-lg shadow-black/10" aria-hidden="true">F</span>
+        <span class="brand-mark grid size-9 place-items-center rounded-xl font-display text-lg italic shadow-lg shadow-black/20" aria-hidden="true">F</span>
         <span id="app-name">FilmX</span>
       </a>
       <div class="flex items-center gap-2">
@@ -25,16 +28,21 @@
 
     <main class="px-5 sm:px-8">
       <section class="relative overflow-hidden py-10 sm:py-16" id="hero">
-        <div class="pointer-events-none absolute -right-14 top-3 size-48 rounded-full border border-accent/20 sm:size-64" aria-hidden="true"></div>
+        <div class="pointer-events-none absolute -right-16 top-0 size-56 rounded-full border border-accent/25 sm:size-72" aria-hidden="true"></div>
+        <div class="pointer-events-none absolute -right-24 top-16 size-40 rounded-full bg-accent-2/10 blur-3xl sm:size-56" aria-hidden="true"></div>
         <div class="relative max-w-2xl">
           <p class="mb-3 text-[10px] font-bold uppercase tracking-[.24em] text-accent">FILMX COLLECTION</p>
           <h1 class="m-0 font-display text-5xl font-normal leading-[.92] tracking-[-.055em] text-ink sm:text-7xl">
-            Find your next<br><em class="font-normal text-accent">great story.</em>
+            Find your next<br><em class="gradient-text font-normal not-italic">great story.</em>
           </h1>
           <p class="mt-5 max-w-lg text-sm leading-6 text-subtle">
             Search fast. Unlock once. Receive your movie directly in Telegram.<br>
             <span lang="my">မြန်မြန်ရှာပါ၊ တစ်ကြိမ်ဝင်ပြီး Telegram မှာ ရုပ်ရှင်တိုက်ရိုက်ရယူပါ။</span>
           </p>
+          <div class="mt-6 flex flex-wrap gap-2">
+            <span class="rounded-full border border-line bg-surface/70 px-3 py-1.5 text-[10px] font-semibold text-subtle" id="library-total-pill"><span class="text-ink" id="library-total-count">—</span> movies indexed</span>
+            <span class="rounded-full border border-line bg-surface/70 px-3 py-1.5 text-[10px] font-semibold text-subtle">Instant Telegram delivery</span>
+          </div>
         </div>
       </section>
 
@@ -75,11 +83,11 @@
         </div>
 
         <div class="grid grid-cols-2 gap-x-3 gap-y-7 sm:grid-cols-3 sm:gap-x-4 lg:grid-cols-4" id="movie-grid"></div>
-        <button class="mt-8 min-h-12 w-full rounded-xl border border-line bg-surface text-xs font-bold text-ink transition hover:border-accent disabled:opacity-50" id="load-more" type="button" hidden>Load more · နောက်ထပ်ကြည့်ရန်</button>
+        <button class="mt-8 min-h-12 w-full rounded-xl border border-line bg-surface px-4 py-2.5 text-xs font-bold leading-relaxed text-ink transition hover:border-accent hover:text-accent disabled:opacity-50" id="load-more" type="button" hidden>Load more · <span lang="my">နောက်ထပ်ကြည့်ရန်</span></button>
 
         <div class="py-14 text-center" id="empty-state" hidden>
-          <span class="font-display text-6xl text-accent" aria-hidden="true">◌</span>
-          <h3 class="mb-1 mt-2 font-display text-2xl font-normal">Nothing found · မတွေ့ပါ</h3>
+          <span class="gradient-text font-display text-6xl" aria-hidden="true">◌</span>
+          <h3 class="mb-1 mt-2 font-display text-2xl font-normal">Nothing found · <span lang="my">မတွေ့ပါ</span></h3>
           <p class="m-0 text-xs leading-5 text-subtle">Try fewer words or remove a quality filter.<br><span lang="my">စာလုံးနည်းနည်းဖြင့်ရှာပါ သို့မဟုတ် quality filter ကို ဖြုတ်ပါ။</span></p>
         </div>
 
@@ -99,27 +107,27 @@
 
   <dialog class="m-auto mb-2 max-h-[90dvh] w-[calc(100%-1rem)] max-w-lg overflow-auto rounded-3xl border border-line bg-surface p-0 text-ink shadow-float backdrop:bg-black/75" id="movie-sheet">
     <button class="absolute right-3 top-3 z-10 grid size-9 place-items-center rounded-full border border-line bg-app/80 text-xl backdrop-blur" type="button" data-close="movie-sheet" aria-label="Close">×</button>
-    <div class="poster-art grid h-56 place-items-center" id="detail-poster"><span class="font-display text-6xl italic text-accent">FX</span></div>
+    <div class="poster-art grid h-56 place-items-center" id="detail-poster"><span class="gradient-text font-display text-6xl italic">FX</span></div>
     <div class="p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:p-7">
       <p class="mb-2 text-[9px] font-bold uppercase tracking-[.22em] text-accent">NOW SELECTED</p>
       <h2 class="m-0 font-display text-3xl font-normal leading-tight" id="detail-title"></h2>
       <div class="my-4 flex flex-wrap gap-1.5" id="detail-meta"></div>
       <p class="line-clamp-5 text-xs leading-6 text-subtle" id="detail-copy"></p>
       <div class="mt-5 grid grid-cols-[1fr_3.25rem] gap-2">
-        <button class="flex min-h-13 items-center justify-between rounded-xl bg-accent px-4 text-xs font-bold text-on-accent disabled:opacity-60" id="get-movie" type="button">Get movie · ရုပ်ရှင်ရယူရန် <span class="text-lg">→</span></button>
-        <button class="favorite-button rounded-xl border border-line bg-transparent text-2xl text-subtle" id="favorite-movie" type="button" aria-label="Add to favorites">♡</button>
+        <button class="btn-primary flex min-h-13 items-center justify-between gap-2 rounded-xl px-4 py-3 text-xs font-bold leading-relaxed disabled:opacity-60" id="get-movie" type="button"><span id="get-movie-label">Get movie · <span lang="my">ရုပ်ရှင်ရယူရန်</span></span> <span class="text-lg">→</span></button>
+        <button class="favorite-button rounded-xl border border-line bg-transparent text-2xl text-subtle transition" id="favorite-movie" type="button" aria-label="Add to favorites">♡</button>
       </div>
     </div>
   </dialog>
 
   <dialog class="m-auto w-[calc(100%-2rem)] max-w-sm rounded-3xl border border-line bg-surface p-6 text-center text-ink shadow-float backdrop:bg-black/75" id="join-dialog">
     <button class="absolute right-3 top-3 grid size-9 place-items-center rounded-full border border-line bg-app/70 text-xl" type="button" data-close="join-dialog" aria-label="Close">×</button>
-    <div class="mx-auto mb-5 grid size-14 place-items-center rounded-2xl bg-accent text-2xl text-on-accent" aria-hidden="true">⌁</div>
+    <div class="brand-mark mx-auto mb-5 grid size-14 place-items-center rounded-2xl text-2xl" aria-hidden="true">⌁</div>
     <p class="mb-2 text-[9px] font-bold uppercase tracking-[.22em] text-accent">ONE STEP LEFT</p>
     <h2 class="m-0 font-display text-3xl font-normal">Join to unlock</h2>
     <p class="my-4 text-xs leading-6 text-subtle">Join our official channel. Delivery starts automatically after verification.<br><br><span lang="my">တရားဝင်ချန်နယ်သို့ ဝင်ပါ။ အတည်ပြုပြီးသည်နှင့် အလိုအလျောက် ပို့ပေးပါမည်။</span></p>
-    <a class="mt-5 flex min-h-12 items-center justify-between rounded-xl bg-accent px-4 text-xs font-bold text-on-accent no-underline" id="join-channel" href="#">Join · ချန်နယ်ဝင်ရန် <span class="text-lg">↗</span></a>
-    <button class="mt-2 min-h-12 w-full rounded-xl border border-line bg-transparent text-xs font-bold text-ink" id="check-again" type="button">Check again · ပြန်စစ်ရန်</button>
+    <a class="join-cta mt-5 flex min-h-12 items-center justify-between gap-2 rounded-xl px-4 py-3 text-xs font-bold leading-relaxed no-underline" id="join-channel" href="#"><span>Join · <span lang="my">ချန်နယ်ဝင်ရန်</span></span> <span class="text-lg">↗</span></a>
+    <button class="mt-2 min-h-12 w-full rounded-xl border border-line bg-transparent px-4 py-3 text-xs font-bold leading-relaxed text-ink transition hover:border-accent" id="check-again" type="button">Check again · <span lang="my">ပြန်စစ်ရန်</span></button>
   </dialog>
 
   <div class="toast pointer-events-none fixed inset-x-5 bottom-[calc(6.5rem+env(safe-area-inset-bottom))] z-50 mx-auto max-w-sm translate-y-2 rounded-xl bg-ink px-4 py-3 text-center text-xs text-app opacity-0 shadow-float transition" id="toast" role="status" aria-live="polite"></div>
