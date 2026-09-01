@@ -17,13 +17,13 @@
 
 :root {
   color-scheme: light dark;
-  --fx-bg: var(--tg-theme-bg-color, #09090f);
-  --fx-surface: var(--tg-theme-secondary-bg-color, #14141f);
+  --fx-bg: var(--tg-theme-bg-color, #101114);
+  --fx-surface: var(--tg-theme-secondary-bg-color, #1b1d22);
   --fx-elevated: color-mix(in srgb, var(--fx-surface) 86%, var(--fx-text) 14%);
-  --fx-text: var(--tg-theme-text-color, #f5f4fb);
-  --fx-muted: var(--tg-theme-hint-color, #9694ab);
-  --fx-accent: var(--tg-theme-button-color, #8b5cf6);
-  --fx-accent-2: #fb64b6;
+  --fx-text: var(--tg-theme-text-color, #f3f4f6);
+  --fx-muted: var(--tg-theme-hint-color, #999ba4);
+  --fx-accent: var(--tg-theme-button-color, #3355c2);
+  --fx-accent-2: #5b6b85;
   --fx-accent-text: var(--tg-theme-button-text-color, #ffffff);
   --fx-border: color-mix(in srgb, var(--fx-text) 12%, transparent);
   --fx-gradient: linear-gradient(135deg, var(--fx-accent), var(--fx-accent-2));
